@@ -1,5 +1,21 @@
 // Cost calculation utilities for window management system
 
+// Dora conversion utilities
+// 1 inch = 8 dora, therefore 1 dora = 0.125 inches (1/8 inch)
+export const doraToInches = (dora) => {
+  return dora * 0.125;
+};
+
+export const inchesToDora = (inches) => {
+  return inches * 8;
+};
+
+// Convert inches and dora to total inches
+// Example: 34 inches and 2 dora = 34 + (2 * 0.125) = 34.25 inches
+export const convertToTotalInches = (inches, dora = 0) => {
+  return inches + doraToInches(dora);
+};
+
 // Convert inches to feet
 export const inchesToFeet = (inches) => {
   return inches / 12;
@@ -38,10 +54,21 @@ export const calculatePerimeter = (length, width, unit = 'feet') => {
 
 // Calculate cost for Mini Domal (Sliding Window)
 export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, hasMosquitoNet = false, hasGrill = false, numberOfPipes = 0) => {
-  const { length, width, unit } = dimensions;
+  const { length, width, unit, lengthDora = 0, widthDora = 0 } = dimensions;
+  
   // For windows: length = horizontal dimension (width), width = vertical dimension (height)
-  const lengthFeet = unit === 'inches' ? inchesToFeet(length) : length;
-  const widthFeet = unit === 'inches' ? inchesToFeet(width) : width;
+  // Handle dora measurements: if unit is inches and dora is provided, add dora to inches
+  let actualLength = length;
+  let actualWidth = width;
+  
+  if (unit === 'inches') {
+    // Add dora to inches if provided (e.g., 34 inches + 2 dora = 34.25 inches)
+    actualLength = convertToTotalInches(length, lengthDora);
+    actualWidth = convertToTotalInches(width, widthDora);
+  }
+  
+  const lengthFeet = unit === 'inches' ? inchesToFeet(actualLength) : actualLength;
+  const widthFeet = unit === 'inches' ? inchesToFeet(actualWidth) : actualWidth;
   const l = lengthFeet; // length (horizontal dimension)
   const h = widthFeet;  // height (vertical dimension)
   const area = lengthFeet * widthFeet;
@@ -111,7 +138,7 @@ export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, has
     coatingCost = totalKg * coatingRate;
     
     // 7. Glass: 2(l+h) * glass type price per sqft
-    glassArea = 2 * (l + h);
+    glassArea = l*h;
     glassCost = glassArea * glassRate;
     
     // 8. Lock: 2 * 100rs
@@ -286,7 +313,14 @@ export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, has
     dimensions: {
       length: lengthFeet,
       width: widthFeet,
-      unit: 'feet'
+      unit: 'feet',
+      originalLength: length,
+      originalWidth: width,
+      lengthDora: lengthDora,
+      widthDora: widthDora,
+      actualLengthInches: actualLength,
+      actualWidthInches: actualWidth,
+      originalUnit: unit
     },
     breakdown: {
       outerFrame: {

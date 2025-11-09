@@ -7,6 +7,8 @@ const CostingPage = ({ rates = {} }) => {
   const [subCategory, setSubCategory] = useState('');
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
+  const [lengthDora, setLengthDora] = useState('');
+  const [widthDora, setWidthDora] = useState('');
   const [unit, setUnit] = useState('feet');
   const [tracks, setTracks] = useState(2);
   const [hasMosquitoNet, setHasMosquitoNet] = useState(false);
@@ -19,6 +21,14 @@ const CostingPage = ({ rates = {} }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [expandedWindows, setExpandedWindows] = useState([]);
+  
+  // Batch entry states
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [batchConfig, setBatchConfig] = useState(null);
+  const [batchRows, setBatchRows] = useState([
+    { id: 1, name: '', length: '', width: '', lengthDora: '', widthDora: '' }
+  ]);
 
   const handleCalculate = () => {
     if (!category || !subCategory || !length || !width) {
@@ -34,6 +44,8 @@ const CostingPage = ({ rates = {} }) => {
     const dimensions = {
       length: parseFloat(length),
       width: parseFloat(width),
+      lengthDora: unit === 'inches' ? (lengthDora ? parseFloat(lengthDora) : 0) : 0,
+      widthDora: unit === 'inches' ? (widthDora ? parseFloat(widthDora) : 0) : 0,
       unit
     };
 
@@ -56,6 +68,8 @@ const CostingPage = ({ rates = {} }) => {
         dimensions: {
           length: parseFloat(length),
           width: parseFloat(width),
+          lengthDora: unit === 'inches' ? (lengthDora ? parseFloat(lengthDora) : 0) : 0,
+          widthDora: unit === 'inches' ? (widthDora ? parseFloat(widthDora) : 0) : 0,
           unit
         },
         options: {
@@ -76,6 +90,8 @@ const CostingPage = ({ rates = {} }) => {
       setSubCategory('');
       setLength('');
       setWidth('');
+      setLengthDora('');
+      setWidthDora('');
       setUnit('feet');
       setTracks(2);
       setHasMosquitoNet(false);
@@ -90,6 +106,16 @@ const CostingPage = ({ rates = {} }) => {
 
   const handleRemoveWindow = (id) => {
     setWindowsList(windowsList.filter(window => window.id !== id));
+    setExpandedWindows(expandedWindows.filter(windowId => windowId !== id));
+  };
+
+  const toggleWindowExpand = (id, e) => {
+    e.stopPropagation();
+    if (expandedWindows.includes(id)) {
+      setExpandedWindows(expandedWindows.filter(windowId => windowId !== id));
+    } else {
+      setExpandedWindows([...expandedWindows, id]);
+    }
   };
 
   const handleClearAll = () => {
@@ -133,6 +159,8 @@ const CostingPage = ({ rates = {} }) => {
     setSubCategory('');
     setLength('');
     setWidth('');
+    setLengthDora('');
+    setWidthDora('');
     setUnit('feet');
     setTracks(2);
     setHasMosquitoNet(false);
@@ -140,6 +168,153 @@ const CostingPage = ({ rates = {} }) => {
     setNumberOfPipes('');
     setGlassType('plane');
     setWindowName('');
+  };
+
+  // Batch entry handlers
+  const handleOpenBatchMode = () => {
+    if (!category || !subCategory) {
+      alert('Please select Category and Sub Category first');
+      return;
+    }
+    
+    if (hasGrill && (!numberOfPipes || parseInt(numberOfPipes) < 1)) {
+      alert('Please enter the number of pipes required for grill window');
+      return;
+    }
+
+    // Capture current form configuration
+    const config = {
+      category,
+      subCategory,
+      unit,
+      tracks: parseInt(tracks),
+      hasMosquitoNet,
+      hasGrill,
+      numberOfPipes: hasGrill ? parseInt(numberOfPipes) : 0,
+      glassType
+    };
+    
+    setBatchConfig(config);
+    setBatchRows([{ id: 1, name: '', length: '', width: '', lengthDora: '', widthDora: '' }]);
+    setShowBatchModal(true);
+  };
+
+  const handleCloseBatchModal = () => {
+    setShowBatchModal(false);
+    setBatchConfig(null);
+    setBatchRows([{ id: 1, name: '', length: '', width: '', lengthDora: '', widthDora: '' }]);
+  };
+
+  const handleAddBatchRow = () => {
+    const newId = Math.max(...batchRows.map(r => r.id)) + 1;
+    setBatchRows([...batchRows, { id: newId, name: '', length: '', width: '', lengthDora: '', widthDora: '' }]);
+  };
+
+  const handleRemoveBatchRow = (id) => {
+    if (batchRows.length === 1) {
+      alert('At least one row is required');
+      return;
+    }
+    setBatchRows(batchRows.filter(row => row.id !== id));
+  };
+
+  const handleBatchRowChange = (id, field, value) => {
+    setBatchRows(batchRows.map(row => 
+      row.id === id ? { ...row, [field]: value } : row
+    ));
+  };
+
+  const handleAddAllWindows = () => {
+    // Validate all rows
+    const validRows = [];
+    for (let i = 0; i < batchRows.length; i++) {
+      const row = batchRows[i];
+      if (!row.length || !row.width) {
+        alert(`Row ${i + 1}: Please fill in both Length and Width`);
+        return;
+      }
+      const lengthVal = parseFloat(row.length);
+      const widthVal = parseFloat(row.width);
+      if (isNaN(lengthVal) || lengthVal <= 0 || isNaN(widthVal) || widthVal <= 0) {
+        alert(`Row ${i + 1}: Please enter valid positive numbers for Length and Width`);
+        return;
+      }
+      validRows.push({
+        ...row,
+        length: lengthVal,
+        width: widthVal
+      });
+    }
+
+    // Calculate and add all windows
+    const newWindows = [];
+    for (const row of validRows) {
+      const dimensions = {
+        length: row.length,
+        width: row.width,
+        lengthDora: batchConfig.unit === 'inches' ? (row.lengthDora ? parseFloat(row.lengthDora) : 0) : 0,
+        widthDora: batchConfig.unit === 'inches' ? (row.widthDora ? parseFloat(row.widthDora) : 0) : 0,
+        unit: batchConfig.unit
+      };
+
+      const options = {
+        tracks: batchConfig.tracks,
+        hasMosquitoNet: batchConfig.hasMosquitoNet,
+        hasGrill: batchConfig.hasGrill,
+        numberOfPipes: batchConfig.numberOfPipes,
+        glassType: batchConfig.glassType
+      };
+
+      const result = calculateWindowCost(batchConfig.category, batchConfig.subCategory, dimensions, options, rates);
+      
+      if (result) {
+        const windowData = {
+          id: Date.now() + Math.random(), // Ensure unique ID
+          name: row.name.trim() || null,
+          category: batchConfig.category,
+          subCategory: batchConfig.subCategory,
+          dimensions: {
+            length: row.length,
+            width: row.width,
+            lengthDora: batchConfig.unit === 'inches' ? (row.lengthDora ? parseFloat(row.lengthDora) : 0) : 0,
+            widthDora: batchConfig.unit === 'inches' ? (row.widthDora ? parseFloat(row.widthDora) : 0) : 0,
+            unit: batchConfig.unit
+          },
+          options: {
+            tracks: batchConfig.tracks,
+            hasMosquitoNet: batchConfig.hasMosquitoNet,
+            hasGrill: batchConfig.hasGrill,
+            numberOfPipes: batchConfig.numberOfPipes,
+            glassType: batchConfig.glassType
+          },
+          result: result,
+          timestamp: new Date().toLocaleString()
+        };
+        newWindows.push(windowData);
+      }
+    }
+
+    if (newWindows.length > 0) {
+      setWindowsList([...windowsList, ...newWindows]);
+      handleCloseBatchModal();
+      alert(`Successfully added ${newWindows.length} window${newWindows.length !== 1 ? 's' : ''}!`);
+    } else {
+      alert('Failed to calculate windows. Please check your inputs.');
+    }
+  };
+
+  const getBatchConfigDisplay = () => {
+    if (!batchConfig) return '';
+    
+    const trackDisplay = batchConfig.hasMosquitoNet 
+      ? '2 Tracks with Mosquitoes Net'
+      : batchConfig.hasGrill 
+        ? `2 Tracks + Grill (${batchConfig.numberOfPipes} pipes)`
+        : `${batchConfig.tracks} Tracks`;
+    
+    const glassDisplay = batchConfig.glassType === 'plane' ? 'Plane Glass' : 'Reflective Glass';
+    
+    return `${getCategoryDisplayName(batchConfig.category, batchConfig.subCategory)} | ${trackDisplay} | ${glassDisplay}`;
   };
 
   // Calculate totals for summary
@@ -360,24 +535,58 @@ const CostingPage = ({ rates = {} }) => {
                 placeholder="Enter length"
               />
             </div>
+            {unit === 'inches' && (
+              <div className="form-group">
+                <label>Length Dora (1 inch = 8 dora)</label>
+                <input
+                  type="number"
+                  value={lengthDora}
+                  onChange={(e) => setLengthDora(e.target.value)}
+                  onWheel={(e) => e.target.blur()}
+                  step="1"
+                  min="0"
+                  max="7"
+                  placeholder="0-7 dora"
+                />
+              </div>
+            )}
             <div className="form-group">
-              <label>Width *</label>
+              <label>Height *</label>
               <input
                 type="number"
                 value={width}
                 onChange={(e) => setWidth(e.target.value)}
                 onWheel={(e) => e.target.blur()}
                 step="0.01"
-                placeholder="Enter width"
+                placeholder="Enter height"
               />
             </div>
+            {unit === 'inches' && (
+              <div className="form-group">
+                <label>Height Dora (1 inch = 8 dora)</label>
+                <input
+                  type="number"
+                  value={widthDora}
+                  onChange={(e) => setWidthDora(e.target.value)}
+                  onWheel={(e) => e.target.blur()}
+                  step="1"
+                  min="0"
+                  max="7"
+                  placeholder="0-7 dora"
+                />
+              </div>
+            )}
             <div className="form-group">
               <label>Unit</label>
               <div className="button-group">
                 <button
                   type="button"
                   className={`option-button ${unit === 'feet' ? 'active' : ''}`}
-                  onClick={() => setUnit('feet')}
+                  onClick={() => {
+                    setUnit('feet');
+                    setLengthDora('');
+                    setWidthDora('');
+                  }}
                 >
                   Feet
                 </button>
@@ -474,6 +683,14 @@ const CostingPage = ({ rates = {} }) => {
             <button onClick={handleCalculate} className="calculate-btn">
               Add Window
             </button>
+            <button 
+              onClick={handleOpenBatchMode} 
+              className="batch-btn"
+              disabled={!category || !subCategory}
+              title="Add multiple windows with same settings but different dimensions"
+            >
+              Add Multiple Windows
+            </button>
             <button onClick={handleReset} className="reset-btn">
               Reset
             </button>
@@ -495,24 +712,31 @@ const CostingPage = ({ rates = {} }) => {
             {windowsList.map((window, index) => (
               <div 
                 key={window.id} 
-                className="window-card"
-                onClick={() => handleWindowClick(window, index)}
-                style={{ cursor: 'pointer' }}
+                className={`window-card ${expandedWindows.includes(window.id) ? 'expanded' : ''}`}
               >
-                <div className="window-card-header">
-                  <span className="window-number">Window #{index + 1}</span>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveWindow(window.id);
-                    }} 
-                    className="remove-window-btn"
-                    title="Remove window"
-                  >
-                    ×
-                  </button>
+                <div 
+                  className="window-card-header"
+                  onClick={(e) => toggleWindowExpand(window.id, e)}
+                >
+                  <div className="window-header-content">
+                    <span className="window-number">Window #{index + 1}</span>
+                    <span className="window-name-small">{window.name || 'Unnamed Window'}</span>
+                  </div>
+                  <div className="window-header-actions">
+                    <span className="expand-icon">{expandedWindows.includes(window.id) ? '▼' : '▶'}</span>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveWindow(window.id);
+                      }} 
+                      className="remove-window-btn"
+                      title="Remove window"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-                <div className="window-card-body">
+                <div className={`window-card-body ${expandedWindows.includes(window.id) ? 'show' : 'hide'}`}>
                   <div className="window-name-display">
                     <span className="window-name-label">Name:</span>
                     <span className="window-name-value">{window.name || 'Unnamed Window'}</span>
@@ -523,9 +747,14 @@ const CostingPage = ({ rates = {} }) => {
                       <span className="info-value">{getCategoryDisplayName(window.category, window.subCategory)}</span>
                     </div>
                     <div className="window-info-item">
-                      <span className="info-label">Dimensions:</span>
+                      <span className="info-label">Dimensions (L × H):</span>
                       <span className="info-value">
-                        {window.dimensions.length.toFixed(2)} × {window.dimensions.width.toFixed(2)} {window.dimensions.unit}
+                        {window.dimensions.length.toFixed(2)}
+                        {window.dimensions.unit === 'inches' && window.dimensions.lengthDora > 0 && ` + ${window.dimensions.lengthDora}d`}
+                        {' × '}
+                        {window.dimensions.width.toFixed(2)}
+                        {window.dimensions.unit === 'inches' && window.dimensions.widthDora > 0 && ` + ${window.dimensions.widthDora}d`}
+                        {' '}{window.dimensions.unit}
                       </span>
                     </div>
                     {window.options.tracks && (
@@ -561,14 +790,142 @@ const CostingPage = ({ rates = {} }) => {
                       <span className="info-value">Rs. {window.result.costPerSqft.toFixed(2)}</span>
                     </div>
                     <div className="window-info-item click-hint">
-                      <span className="info-value" style={{ fontSize: '0.85rem', color: '#667eea', fontStyle: 'italic' }}>
-                        Click to view breakdown
-                      </span>
+                      <button 
+                        className="view-breakdown-btn"
+                        onClick={() => handleWindowClick(window, index)}
+                      >
+                        View Cost Breakdown
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Batch Entry Modal */}
+      {showBatchModal && (
+        <div className="modal-overlay" onClick={handleCloseBatchModal}>
+          <div className="batch-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="batch-modal-header">
+              <h2>Add Multiple Windows</h2>
+              <button onClick={handleCloseBatchModal} className="close-modal-btn">×</button>
+            </div>
+            <div className="batch-modal-body">
+              <div className="batch-config-display">
+                <strong>Configuration:</strong> {getBatchConfigDisplay()}
+              </div>
+              
+              <div className="batch-table-container">
+                <table className="batch-table">
+                  <thead>
+                    <tr>
+                      <th className="batch-col-number">#</th>
+                      <th className="batch-col-name">Window Name (Optional)</th>
+                      <th className="batch-col-dimension">Length ({batchConfig?.unit || 'feet'}) *</th>
+                      {batchConfig?.unit === 'inches' && (
+                        <th className="batch-col-dora">L-Dora</th>
+                      )}
+                      <th className="batch-col-dimension">Height ({batchConfig?.unit || 'feet'}) *</th>
+                      {batchConfig?.unit === 'inches' && (
+                        <th className="batch-col-dora">H-Dora</th>
+                      )}
+                      <th className="batch-col-action">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batchRows.map((row, index) => (
+                      <tr key={row.id}>
+                        <td className="batch-col-number">{index + 1}</td>
+                        <td className="batch-col-name">
+                          <input
+                            type="text"
+                            value={row.name}
+                            onChange={(e) => handleBatchRowChange(row.id, 'name', e.target.value)}
+                            placeholder="e.g., Living Room"
+                            maxLength={100}
+                          />
+                        </td>
+                        <td className="batch-col-dimension">
+                          <input
+                            type="number"
+                            value={row.length}
+                            onChange={(e) => handleBatchRowChange(row.id, 'length', e.target.value)}
+                            onWheel={(e) => e.target.blur()}
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                        </td>
+                        {batchConfig?.unit === 'inches' && (
+                          <td className="batch-col-dora">
+                            <input
+                              type="number"
+                              value={row.lengthDora}
+                              onChange={(e) => handleBatchRowChange(row.id, 'lengthDora', e.target.value)}
+                              onWheel={(e) => e.target.blur()}
+                              step="1"
+                              min="0"
+                              max="7"
+                              placeholder="0-7"
+                            />
+                          </td>
+                        )}
+                        <td className="batch-col-dimension">
+                          <input
+                            type="number"
+                            value={row.width}
+                            onChange={(e) => handleBatchRowChange(row.id, 'width', e.target.value)}
+                            onWheel={(e) => e.target.blur()}
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                        </td>
+                        {batchConfig?.unit === 'inches' && (
+                          <td className="batch-col-dora">
+                            <input
+                              type="number"
+                              value={row.widthDora}
+                              onChange={(e) => handleBatchRowChange(row.id, 'widthDora', e.target.value)}
+                              onWheel={(e) => e.target.blur()}
+                              step="1"
+                              min="0"
+                              max="7"
+                              placeholder="0-7"
+                            />
+                          </td>
+                        )}
+                        <td className="batch-col-action">
+                          <button
+                            onClick={() => handleRemoveBatchRow(row.id)}
+                            className="batch-remove-btn"
+                            title="Remove this row"
+                            disabled={batchRows.length === 1}
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="batch-modal-actions">
+                <button onClick={handleAddBatchRow} className="add-row-btn">
+                  + Add Row
+                </button>
+                <div className="batch-modal-buttons">
+                  <button onClick={handleAddAllWindows} className="modal-btn primary">
+                    Add All Windows ({batchRows.length})
+                  </button>
+                  <button onClick={handleCloseBatchModal} className="modal-btn secondary">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
