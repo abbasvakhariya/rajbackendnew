@@ -42,11 +42,27 @@ const ToolSettings = () => {
         hingesWeight: 0.150,
         lockWeight: 0.200,
       }
+    },
+    cuttingMeasuring: {
+      profiles: {}
     }
   });
 
   const [selectedTool, setSelectedTool] = useState(null);
   const [activeTab, setActiveTab] = useState('miniDomal');
+  
+  // Cutting Measuring Tool states
+  const [showAddProfileModal, setShowAddProfileModal] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(null);
+  const [newProfile, setNewProfile] = useState({
+    name: '',
+    top: 0,
+    bottom: 0,
+    handleInnerLock: 0,
+    interLock: 0,
+    bearingBottom: 0,
+    glass: 0
+  });
 
   useEffect(() => {
     // Load settings from localStorage
@@ -90,6 +106,132 @@ const ToolSettings = () => {
     localStorage.setItem('toolSettings', JSON.stringify(defaultSettings));
   };
 
+  // Cutting Measuring Tool functions
+  const handleAddProfile = () => {
+    if (!newProfile.name.trim()) {
+      alert('Please enter a profile name');
+      return;
+    }
+    
+    const updatedSettings = {
+      ...settings,
+      cuttingMeasuring: {
+        ...settings.cuttingMeasuring,
+        profiles: {
+          ...settings.cuttingMeasuring.profiles,
+          [newProfile.name]: {
+            top: parseFloat(newProfile.top) || 0,
+            bottom: parseFloat(newProfile.bottom) || 0,
+            handleInnerLock: parseFloat(newProfile.handleInnerLock) || 0,
+            interLock: parseFloat(newProfile.interLock) || 0,
+            bearingBottom: parseFloat(newProfile.bearingBottom) || 0,
+            glass: parseFloat(newProfile.glass) || 0
+          }
+        }
+      }
+    };
+    
+    setSettings(updatedSettings);
+    localStorage.setItem('toolSettings', JSON.stringify(updatedSettings));
+    setShowAddProfileModal(false);
+    setNewProfile({
+      name: '',
+      top: 0,
+      bottom: 0,
+      handleInnerLock: 0,
+      interLock: 0,
+      bearingBottom: 0,
+      glass: 0
+    });
+  };
+
+  const handleEditProfile = (profileName) => {
+    const profile = settings.cuttingMeasuring.profiles[profileName];
+    setEditingProfile(profileName);
+    setNewProfile({
+      name: profileName,
+      ...profile
+    });
+    setShowAddProfileModal(true);
+  };
+
+  const handleUpdateProfile = () => {
+    if (!newProfile.name.trim()) {
+      alert('Please enter a profile name');
+      return;
+    }
+    
+    const updatedProfiles = { ...settings.cuttingMeasuring.profiles };
+    
+    // Remove old profile if name changed
+    if (editingProfile && editingProfile !== newProfile.name) {
+      delete updatedProfiles[editingProfile];
+    }
+    
+    updatedProfiles[newProfile.name] = {
+      top: parseFloat(newProfile.top) || 0,
+      bottom: parseFloat(newProfile.bottom) || 0,
+      handleInnerLock: parseFloat(newProfile.handleInnerLock) || 0,
+      interLock: parseFloat(newProfile.interLock) || 0,
+      bearingBottom: parseFloat(newProfile.bearingBottom) || 0,
+      glass: parseFloat(newProfile.glass) || 0
+    };
+    
+    const updatedSettings = {
+      ...settings,
+      cuttingMeasuring: {
+        ...settings.cuttingMeasuring,
+        profiles: updatedProfiles
+      }
+    };
+    
+    setSettings(updatedSettings);
+    localStorage.setItem('toolSettings', JSON.stringify(updatedSettings));
+    setShowAddProfileModal(false);
+    setEditingProfile(null);
+    setNewProfile({
+      name: '',
+      top: 0,
+      bottom: 0,
+      handleInnerLock: 0,
+      interLock: 0,
+      bearingBottom: 0,
+      glass: 0
+    });
+  };
+
+  const handleDeleteProfile = (profileName) => {
+    if (window.confirm(`Are you sure you want to delete profile "${profileName}"?`)) {
+      const updatedProfiles = { ...settings.cuttingMeasuring.profiles };
+      delete updatedProfiles[profileName];
+      
+      const updatedSettings = {
+        ...settings,
+        cuttingMeasuring: {
+          ...settings.cuttingMeasuring,
+          profiles: updatedProfiles
+        }
+      };
+      
+      setSettings(updatedSettings);
+      localStorage.setItem('toolSettings', JSON.stringify(updatedSettings));
+    }
+  };
+
+  const handleCancelProfile = () => {
+    setShowAddProfileModal(false);
+    setEditingProfile(null);
+    setNewProfile({
+      name: '',
+      top: 0,
+      bottom: 0,
+      handleInnerLock: 0,
+      interLock: 0,
+      bearingBottom: 0,
+      glass: 0
+    });
+  };
+
   const getDefaultSettings = () => {
     return {
       windowCosting: {
@@ -131,6 +273,9 @@ const ToolSettings = () => {
           hingesWeight: 0.150,
           lockWeight: 0.200,
         }
+      },
+      cuttingMeasuring: {
+        profiles: {}
       }
     };
   };
@@ -149,6 +294,13 @@ const ToolSettings = () => {
       icon: '🚪',
       description: 'Settings for door frame calculations',
       color: '#764ba2'
+    },
+    {
+      id: 'cuttingMeasuring',
+      name: 'Cutting Measuring Tool',
+      icon: '📏',
+      description: 'Create profiles with material cutting specifications',
+      color: '#f59e0b'
     }
   ];
 
@@ -403,6 +555,198 @@ const ToolSettings = () => {
     );
   };
 
+  const renderCuttingMeasuringTool = () => {
+    const profiles = settings.cuttingMeasuring.profiles;
+    const profileNames = Object.keys(profiles);
+
+    return (
+      <div className="tool-settings-body">
+        <div className="cutting-tool-content">
+          <div className="profiles-header">
+            <div>
+              <h3>Material Cutting Profiles</h3>
+              <p className="profiles-subtitle">Create and manage profiles with material specifications</p>
+            </div>
+            <button 
+              onClick={() => setShowAddProfileModal(true)} 
+              className="add-profile-btn"
+            >
+              + Create New Profile
+            </button>
+          </div>
+
+          {profileNames.length === 0 ? (
+            <div className="no-profiles-message">
+              <span className="no-profiles-icon">📏</span>
+              <h4>No Profiles Created Yet</h4>
+              <p>Click "Create New Profile" to add your first material cutting profile</p>
+            </div>
+          ) : (
+            <div className="profiles-grid">
+              {profileNames.map((profileName) => {
+                const profile = profiles[profileName];
+                return (
+                  <div key={profileName} className="profile-card">
+                    <div className="profile-card-header">
+                      <h4>{profileName}</h4>
+                      <div className="profile-actions">
+                        <button 
+                          onClick={() => handleEditProfile(profileName)} 
+                          className="profile-edit-btn"
+                          title="Edit Profile"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteProfile(profileName)} 
+                          className="profile-delete-btn"
+                          title="Delete Profile"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                    <div className="profile-card-body">
+                      <div className="profile-spec-row">
+                        <span className="spec-label">Top:</span>
+                        <span className="spec-value">{profile.top}</span>
+                      </div>
+                      <div className="profile-spec-row">
+                        <span className="spec-label">Bottom:</span>
+                        <span className="spec-value">{profile.bottom}</span>
+                      </div>
+                      <div className="profile-spec-row">
+                        <span className="spec-label">Handle Inner Lock:</span>
+                        <span className="spec-value">{profile.handleInnerLock}</span>
+                      </div>
+                      <div className="profile-spec-row">
+                        <span className="spec-label">Inter Lock:</span>
+                        <span className="spec-value">{profile.interLock}</span>
+                      </div>
+                      <div className="profile-spec-row">
+                        <span className="spec-label">Bearing Bottom:</span>
+                        <span className="spec-value">{profile.bearingBottom}</span>
+                      </div>
+                      <div className="profile-spec-row">
+                        <span className="spec-label">Glass:</span>
+                        <span className="spec-value">{profile.glass}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Add/Edit Profile Modal */}
+          {showAddProfileModal && (
+            <div className="profile-modal-overlay" onClick={handleCancelProfile}>
+              <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="profile-modal-header">
+                  <h3>{editingProfile ? 'Edit Profile' : 'Create New Profile'}</h3>
+                  <button onClick={handleCancelProfile} className="modal-close-btn">×</button>
+                </div>
+                <div className="profile-modal-body">
+                  <div className="profile-form">
+                    <div className="form-group-profile">
+                      <label>Profile Name *</label>
+                      <input
+                        type="text"
+                        value={newProfile.name}
+                        onChange={(e) => setNewProfile({ ...newProfile, name: e.target.value })}
+                        placeholder="e.g., Standard Window Profile"
+                        disabled={editingProfile ? true : false}
+                      />
+                    </div>
+
+                    <div className="materials-grid">
+                      <div className="form-group-profile">
+                        <label>Top</label>
+                        <input
+                          type="number"
+                          value={newProfile.top}
+                          onChange={(e) => setNewProfile({ ...newProfile, top: e.target.value })}
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="form-group-profile">
+                        <label>Bottom</label>
+                        <input
+                          type="number"
+                          value={newProfile.bottom}
+                          onChange={(e) => setNewProfile({ ...newProfile, bottom: e.target.value })}
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="form-group-profile">
+                        <label>Handle Inner Lock</label>
+                        <input
+                          type="number"
+                          value={newProfile.handleInnerLock}
+                          onChange={(e) => setNewProfile({ ...newProfile, handleInnerLock: e.target.value })}
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="form-group-profile">
+                        <label>Inter Lock</label>
+                        <input
+                          type="number"
+                          value={newProfile.interLock}
+                          onChange={(e) => setNewProfile({ ...newProfile, interLock: e.target.value })}
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="form-group-profile">
+                        <label>Bearing Bottom</label>
+                        <input
+                          type="number"
+                          value={newProfile.bearingBottom}
+                          onChange={(e) => setNewProfile({ ...newProfile, bearingBottom: e.target.value })}
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </div>
+
+                      <div className="form-group-profile">
+                        <label>Glass</label>
+                        <input
+                          type="number"
+                          value={newProfile.glass}
+                          onChange={(e) => setNewProfile({ ...newProfile, glass: e.target.value })}
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="profile-modal-footer">
+                  <button onClick={handleCancelProfile} className="modal-btn-secondary">
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={editingProfile ? handleUpdateProfile : handleAddProfile} 
+                    className="modal-btn-primary"
+                  >
+                    {editingProfile ? 'Update Profile' : 'Create Profile'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderToolSettings = () => {
     const currentTool = toolsList.find(t => t.id === selectedTool);
     
@@ -465,6 +809,8 @@ const ToolSettings = () => {
             {renderDoorCostingSettings('standard')}
           </div>
         )}
+
+        {selectedTool === 'cuttingMeasuring' && renderCuttingMeasuringTool()}
 
         <div className="settings-info-box">
           <h4>ℹ️ About Tool Settings</h4>
