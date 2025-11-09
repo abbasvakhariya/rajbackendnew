@@ -1,7 +1,154 @@
-.tool-settings-page {
+.tool-settings-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
+}
+
+.tool-settings-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Tool Selection Screen */
+.tools-list-container {
+  padding: 2rem;
+}
+
+.tools-list-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.tools-list-header h2 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 12px 0;
+}
+
+.tools-list-header p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.tool-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--tool-color);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.tool-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-color: var(--tool-color);
+}
+
+.tool-card:hover::before {
+  transform: scaleX(1);
+}
+
+.tool-card-icon {
+  font-size: 48px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.tool-card-content {
+  flex: 1;
+}
+
+.tool-card-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.tool-card-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.tool-card-arrow {
+  font-size: 24px;
+  color: var(--tool-color);
+  font-weight: bold;
+  transition: transform 0.3s ease;
+}
+
+.tool-card:hover .tool-card-arrow {
+  transform: translateX(4px);
+}
+
+/* Breadcrumb Navigation */
+.tool-settings-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.breadcrumb-btn {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.breadcrumb-btn:hover {
+  background: #f9fafb;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.breadcrumb-separator {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.breadcrumb-current {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 .tool-settings-header-main {
@@ -235,8 +382,62 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .tool-settings-container {
+    padding: 10px;
+  }
+  
   .tool-settings-page {
     padding: 15px;
+  }
+  
+  /* Tool Selection Mobile */
+  .tools-list-container {
+    padding: 1rem;
+  }
+  
+  .tools-list-header h2 {
+    font-size: 24px;
+  }
+  
+  .tools-list-header p {
+    font-size: 14px;
+  }
+  
+  .tools-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .tool-card {
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+  
+  .tool-card-icon {
+    font-size: 36px;
+    min-width: 48px;
+  }
+  
+  .tool-card-content h3 {
+    font-size: 18px;
+  }
+  
+  .tool-card-content p {
+    font-size: 13px;
+  }
+  
+  /* Breadcrumb Mobile */
+  .tool-settings-breadcrumb {
+    flex-wrap: wrap;
+  }
+  
+  .breadcrumb-btn {
+    font-size: 12px;
+    padding: 0.4rem 0.75rem;
+  }
+  
+  .breadcrumb-current {
+    font-size: 12px;
   }
 
   .tool-settings-header-main {
