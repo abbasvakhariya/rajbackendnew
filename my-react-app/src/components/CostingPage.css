@@ -1317,65 +1317,130 @@
     text-align: center;
   }
   
-  /* Batch Modal Mobile */
+  /* Batch Modal Mobile - FULL SCREEN */
   .batch-modal {
-    max-width: 100%;
-    max-height: 95vh;
-    margin: 0.5rem;
-    border-radius: 8px;
-    width: calc(100% - 1rem);
+    max-width: 100vw;
+    max-height: 100vh;
+    margin: 0;
+    border-radius: 0;
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
   }
   
   .batch-modal-header {
     padding: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
   
   .batch-modal-header h2 {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
   }
   
   .batch-modal-body {
-    padding: 1rem;
+    padding: 0.75rem;
+    height: calc(100vh - 140px);
+    overflow-y: auto;
   }
   
   .batch-config-display {
-    padding: 0.875rem;
-    font-size: 0.85rem;
+    padding: 0.75rem;
+    font-size: 0.75rem;
+    margin-bottom: 0.75rem;
+    background: #e3f2fd;
+    border-radius: 6px;
+  }
+  
+  /* Mobile-optimized table - NO horizontal scroll */
+  .batch-table-container {
+    overflow-x: hidden;
+    overflow-y: visible;
+    border: none;
+    margin-bottom: 1rem;
+    width: 100%;
   }
   
   .batch-table {
-    min-width: 500px;
-    font-size: 0.85rem;
+    width: 100%;
+    font-size: 0.75rem;
+    table-layout: fixed;
+    border-collapse: collapse;
   }
   
   .batch-table thead th {
-    padding: 0.75rem 0.5rem;
-    font-size: 0.8rem;
+    padding: 0.5rem 0.2rem;
+    font-size: 0.7rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
   }
   
   .batch-table tbody td {
-    padding: 0.5rem;
+    padding: 0.25rem 0.2rem;
+    vertical-align: middle;
   }
   
   .batch-table input {
-    padding: 0.5rem;
-    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.4rem 0.3rem;
+    font-size: 14px;
+    min-height: 40px;
+    width: 100%;
+    border-radius: 4px;
   }
   
+  /* Text wrapping for name column */
+  .batch-col-name input {
+    word-break: break-word;
+    font-size: 13px;
+  }
+  
+  /* Mobile column widths - Optimized for NO scroll */
   .batch-col-number {
-    width: 40px;
+    width: 7%;
+    min-width: 25px;
+    text-align: center;
+    padding: 0.25rem 0.1rem !important;
   }
   
   .batch-col-name {
-    min-width: 150px;
+    width: 28%;
+    min-width: unset;
   }
   
   .batch-col-dimension {
-    min-width: 100px;
+    width: 22%;
+    min-width: unset;
+  }
+  
+  .batch-col-dora {
+    width: 13%;
+    min-width: unset;
   }
   
   .batch-col-action {
-    width: 60px;
+    width: 8%;
+    min-width: 30px;
+    padding: 0.25rem 0.1rem !important;
+    text-align: center;
+  }
+  
+  /* Close button larger on mobile */
+  .close-modal-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .batch-remove-btn {
@@ -1388,22 +1453,46 @@
   .batch-modal-actions {
     flex-direction: column;
     gap: 0.75rem;
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 1rem 0.75rem;
+    border-top: 2px solid #e0e0e0;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+    margin: 0 -0.75rem;
   }
   
   .add-row-btn {
     width: 100%;
     padding: 0.875rem;
     min-height: 48px;
+    font-size: 0.95rem;
+    font-weight: 600;
   }
   
   .batch-modal-buttons {
     width: 100%;
     flex-direction: column-reverse;
+    gap: 0.5rem;
   }
   
   .batch-modal-buttons .modal-btn {
     width: 100%;
-    min-height: 48px;
+    min-height: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  /* Full screen modal overlay on mobile */
+  .modal-overlay {
+    padding: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
   }
 }
 
