@@ -28,6 +28,11 @@ app.use(cors({
       return callback(null, true);
     }
     
+    // Allow all Vercel deployments (*.vercel.app)
+    if (origin.includes('.vercel.app')) {
+      return callback(null, true);
+    }
+    
     // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
