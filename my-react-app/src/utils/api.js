@@ -36,12 +36,26 @@ const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(`${API_URL}${endpoint}`, config);
-    const data = await response.json();
+    
+    // Handle cases where response is not JSON
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      throw new Error(`Server returned non-JSON response: ${text}`);
+    }
 
     if (!response.ok) {
       // Handle device conflict
       if (data.code === 'DEVICE_CONFLICT') {
         throw new Error('DEVICE_CONFLICT');
+      }
+      // Handle user not found - clear token
+      if (data.code === 'USER_NOT_FOUND' || response.status === 401 || response.status === 404) {
+        localStorage.removeItem('token');
+        throw new Error(data.message || 'User not found. Please login again.');
       }
       throw new Error(data.message || 'Request failed');
     }
@@ -50,6 +64,11 @@ const apiRequest = async (endpoint, options = {}) => {
   } catch (error) {
     if (error.message === 'DEVICE_CONFLICT') {
       throw error;
+    }
+    // If it's a network error, provide better message
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      console.error('API Error: Cannot connect to server. Check if backend is running.');
+      throw new Error('Cannot connect to server. Please check your connection.');
     }
     console.error('API Error:', error);
     throw error;
