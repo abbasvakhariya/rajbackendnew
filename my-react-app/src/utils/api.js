@@ -1,4 +1,22 @@
+// API URL configuration
+// In production (Vercel), this should be set via environment variable: VITE_API_URL
+// Fallback to Render backend if not set
 const API_URL = import.meta.env.VITE_API_URL || 'https://windowmanagementsystem.onrender.com/api';
+
+// Debug: Log API URL in development (helps identify configuration issues)
+if (import.meta.env.DEV) {
+  console.log('🔧 API Configuration:', {
+    'VITE_API_URL env var': import.meta.env.VITE_API_URL,
+    'Using API URL': API_URL,
+    'Environment': import.meta.env.MODE
+  });
+}
+
+// Warn if using localhost in production
+if (import.meta.env.PROD && API_URL.includes('localhost')) {
+  console.error('❌ ERROR: API URL is set to localhost in production!');
+  console.error('Please set VITE_API_URL environment variable in Vercel to: https://windowmanagementsystem.onrender.com/api');
+}
 
 // Helper function to get auth token
 const getToken = () => {
