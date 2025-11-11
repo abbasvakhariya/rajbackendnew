@@ -68,8 +68,16 @@ const RegisterPage = () => {
         setStep('verify');
         setCountdown(60);
       } else {
-        setError(response?.message || 'Registration failed. Please try again.');
+        const errorMsg = response?.message || 'Registration failed. Please try again.';
+        setError(errorMsg);
         console.error('Registration failed:', response);
+        
+        // If user already exists, suggest logging in
+        if (response?.code === 'USER_EXISTS' || errorMsg.includes('already exists')) {
+          setTimeout(() => {
+            setError(errorMsg + ' Click "Login here" below to sign in.');
+          }, 100);
+        }
       }
     } catch (err) {
       setLoading(false);
