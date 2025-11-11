@@ -14,7 +14,8 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://rajwindow.vercel.app'
+  'https://rajwindow.vercel.app',
+  'https://windowmanagementsystem.onrender.com'
 ];
 
 app.use(cors({
