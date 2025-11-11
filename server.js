@@ -69,6 +69,25 @@ app.use('/api/windows', require('./routes/windows'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin', require('./routes/adminEnhanced'));
 
+// Root route - API information
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Window Management System API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      users: '/api/users',
+      subscription: '/api/subscription',
+      settings: '/api/settings',
+      windows: '/api/windows',
+      admin: '/api/admin'
+    },
+    documentation: 'Visit /api/health for server status'
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
