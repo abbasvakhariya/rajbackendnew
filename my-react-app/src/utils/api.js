@@ -1,21 +1,35 @@
 // API URL configuration
 // In production (Vercel), this should be set via environment variable: VITE_API_URL
 // Fallback to Render backend if not set
-const API_URL = import.meta.env.VITE_API_URL || 'https://windowmanagementsystem.onrender.com/api';
+let API_URL = import.meta.env.VITE_API_URL || 'https://windowmanagementsystem.onrender.com/api';
 
-// Debug: Log API URL in development (helps identify configuration issues)
+// Force use Render backend in production if localhost is detected
+if (import.meta.env.PROD && (API_URL.includes('localhost') || API_URL.includes('127.0.0.1'))) {
+  console.warn('⚠️ WARNING: Detected localhost in production! Forcing Render backend URL.');
+  API_URL = 'https://windowmanagementsystem.onrender.com/api';
+}
+
+// Always log API URL in production for debugging
+if (import.meta.env.PROD) {
+  console.log('🌐 API Configuration:', {
+    'Environment Variable': import.meta.env.VITE_API_URL || 'NOT SET',
+    'Using API URL': API_URL,
+    'Mode': import.meta.env.MODE
+  });
+  
+  if (!import.meta.env.VITE_API_URL) {
+    console.warn('⚠️ VITE_API_URL not set in Vercel. Using fallback URL.');
+    console.warn('📝 To fix: Set VITE_API_URL=https://windowmanagementsystem.onrender.com/api in Vercel environment variables');
+  }
+}
+
+// Debug: Log API URL in development
 if (import.meta.env.DEV) {
-  console.log('🔧 API Configuration:', {
+  console.log('🔧 API Configuration (Dev):', {
     'VITE_API_URL env var': import.meta.env.VITE_API_URL,
     'Using API URL': API_URL,
     'Environment': import.meta.env.MODE
   });
-}
-
-// Warn if using localhost in production
-if (import.meta.env.PROD && API_URL.includes('localhost')) {
-  console.error('❌ ERROR: API URL is set to localhost in production!');
-  console.error('Please set VITE_API_URL environment variable in Vercel to: https://windowmanagementsystem.onrender.com/api');
 }
 
 // Helper function to get auth token
