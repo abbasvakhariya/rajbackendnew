@@ -1,19 +1,31 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import DashboardPage from './pages/DashboardPage';
 import ToolsPage from './pages/ToolsPage';
 import CustomersPage from './pages/CustomersPage';
 import ProductsPage from './pages/ProductsPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ReportsPage from './pages/ReportsPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import SubscriptionPage from './pages/SubscriptionPage';
+import AdminPanel from './components/AdminPanel';
+import AdminPanelEnhanced from './components/AdminPanelEnhanced';
 import RateConfiguration from './components/RateConfiguration';
 import ToolSettings from './components/ToolSettings';
+import ProtectedRoute from './components/ProtectedRoute';
 import { initializeSampleData } from './utils/storage';
 import './App.css';
 
 function App() {
+  const { isAuthenticated, user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activePage, setActivePage] = useState(() => {
-    const hash = window.location.hash.slice(1) || 'dashboard';
-    return hash;
+    const path = location.pathname;
+    if (path === '/') return 'dashboard';
+    return path.slice(1) || 'dashboard';
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [rates, setRates] = useState({
@@ -33,49 +45,76 @@ function App() {
     coverPerUnit: 1
   });
 
+  // Initialize sample data once
   useEffect(() => {
-    // Initialize sample data
-    initializeSampleData();
+    if (isAuthenticated) {
+      initializeSampleData();
+    }
+  }, [isAuthenticated]);
 
-    // Load rates from localStorage if available
+  // Load rates once on mount
+  useEffect(() => {
     const savedRates = localStorage.getItem('windowRates');
     if (savedRates) {
       setRates(JSON.parse(savedRates));
     }
-
-    // Handle hash changes for navigation
-    const handleHashChange = () => {
-      const hash = window.location.hash.slice(1) || 'dashboard';
-      setActivePage(hash);
-      setIsMobileMenuOpen(false);
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  // Update active page based on route
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/') {
+      setActivePage('dashboard');
+    } else {
+      setActivePage(path.slice(1));
+    }
+  }, [location.pathname]);
 
   const handleRatesUpdate = (updatedRates) => {
     setRates(updatedRates);
   };
 
   const handlePageChange = (page) => {
-    window.location.hash = page;
+    navigate(`/${page}`);
     setIsMobileMenuOpen(false);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  // ONLY this email can see admin panel
+  const ADMIN_EMAIL = 'abbasvakhariya00@gmail.com';
+  const isAdminUser = user?.email && user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'tools', label: 'Tools', icon: '🛠️' },
-    { id: 'customers', label: 'Customers', icon: '👥' },
-    { id: 'products', label: 'Products', icon: '📦' },
-    { id: 'quotations', label: 'Quotations', icon: '📄' },
-    { id: 'invoices', label: 'Invoices', icon: '🧾' },
-    { id: 'orders', label: 'Orders', icon: '📋' },
-    { id: 'reports', label: 'Reports', icon: '📈' },
-    { id: 'toolSettings', label: 'Tool Settings', icon: '🔧' },
-    { id: 'rates', label: 'Rate Settings', icon: '⚙️' }
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/dashboard' },
+    { id: 'tools', label: 'Tools', icon: '🛠️', path: '/tools' },
+    { id: 'customers', label: 'Customers', icon: '👥', path: '/customers' },
+    { id: 'products', label: 'Products', icon: '📦', path: '/products' },
+    { id: 'quotations', label: 'Quotations', icon: '📄', path: '/quotations' },
+    { id: 'invoices', label: 'Invoices', icon: '🧾', path: '/invoices' },
+    { id: 'orders', label: 'Orders', icon: '📋', path: '/orders' },
+    { id: 'reports', label: 'Reports', icon: '📈', path: '/reports' },
+    { id: 'toolSettings', label: 'Tool Settings', icon: '🔧', path: '/tool-settings' },
+    { id: 'rates', label: 'Rate Settings', icon: '⚙️', path: '/rates' },
+    // ONLY show admin panel to the specific email - subscription doesn't matter
+    ...(isAdminUser ? [{ id: 'admin', label: 'Admin Panel', icon: '🔐', path: '/admin' }] : [])
   ];
 
+  // Public routes (no authentication required)
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  // Authenticated routes
   return (
     <div className="app">
       {/* Header */}
@@ -98,6 +137,18 @@ function App() {
         <div className="header-right">
           <div className="user-info">
             <span className="user-avatar">👤</span>
+            <div className="user-details">
+              <span className="user-name">{user?.fullName || 'User'}</span>
+              <span className="user-email">{user?.email}</span>
+            </div>
+            <div className="user-menu">
+              <button onClick={() => navigate('/subscription')} className="menu-item">
+                Subscription
+              </button>
+              <button onClick={handleLogout} className="menu-item">
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -130,16 +181,72 @@ function App() {
         {/* Main Content */}
         <main className="app-main">
           <div className="page-container">
-            {activePage === 'dashboard' && <DashboardPage />}
-            {activePage === 'tools' && <ToolsPage rates={rates} />}
-            {activePage === 'customers' && <CustomersPage />}
-            {activePage === 'products' && <ProductsPage />}
-            {activePage === 'quotations' && <ProjectsPage title="Quotations" icon="📄" feature="Quotation Management" />}
-            {activePage === 'invoices' && <ProjectsPage title="Invoices" icon="🧾" feature="Invoice Management" />}
-            {activePage === 'orders' && <ProjectsPage title="Orders" icon="📋" feature="Order Management" />}
-            {activePage === 'reports' && <ReportsPage />}
-            {activePage === 'toolSettings' && <ToolSettings />}
-            {activePage === 'rates' && <RateConfiguration onRatesUpdate={handleRatesUpdate} />}
+            <Routes>
+              <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/register" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/subscription" element={
+                <ProtectedRoute>
+                  <SubscriptionPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <ProtectedRoute>
+                  <AdminPanelEnhanced />
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/tools" element={
+                <ProtectedRoute>
+                  <ToolsPage rates={rates} />
+                </ProtectedRoute>
+              } />
+              <Route path="/customers" element={
+                <ProtectedRoute>
+                  <CustomersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/products" element={
+                <ProtectedRoute>
+                  <ProductsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/quotations" element={
+                <ProtectedRoute>
+                  <ProjectsPage title="Quotations" icon="📄" feature="Quotation Management" />
+                </ProtectedRoute>
+              } />
+              <Route path="/invoices" element={
+                <ProtectedRoute>
+                  <ProjectsPage title="Invoices" icon="🧾" feature="Invoice Management" />
+                </ProtectedRoute>
+              } />
+              <Route path="/orders" element={
+                <ProtectedRoute>
+                  <ProjectsPage title="Orders" icon="📋" feature="Order Management" />
+                </ProtectedRoute>
+              } />
+              <Route path="/reports" element={
+                <ProtectedRoute>
+                  <ReportsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/tool-settings" element={
+                <ProtectedRoute>
+                  <ToolSettings />
+                </ProtectedRoute>
+              } />
+              <Route path="/rates" element={
+                <ProtectedRoute>
+                  <RateConfiguration onRatesUpdate={handleRatesUpdate} />
+                </ProtectedRoute>
+              } />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
           </div>
         </main>
       </div>

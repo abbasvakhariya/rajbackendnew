@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import CostingPage from '../components/CostingPage';
+import CuttingMeasuringTool from '../components/CuttingMeasuringTool';
 import './ToolsPage.css';
 
 const ToolsPage = ({ rates }) => {
@@ -12,6 +13,14 @@ const ToolsPage = ({ rates }) => {
       icon: '🪟',
       description: 'Calculate complete window costs with material breakdown',
       color: '#667eea',
+      status: 'active'
+    },
+    {
+      id: 'cutting-measuring',
+      name: 'Cutting Measuring Tool',
+      icon: '📏',
+      description: 'Get exact cutting lengths for all materials based on profiles',
+      color: '#f59e0b',
       status: 'active'
     },
     {
@@ -44,14 +53,6 @@ const ToolsPage = ({ rates }) => {
       icon: '💹',
       description: 'Coming Soon - Analyze profit margins and costs',
       color: '#e74c3c',
-      status: 'coming-soon'
-    },
-    {
-      id: 'measurement-converter',
-      name: 'Measurement Converter',
-      icon: '📏',
-      description: 'Coming Soon - Convert between different measurement units',
-      color: '#9b59b6',
       status: 'coming-soon'
     }
   ];
@@ -115,6 +116,7 @@ const ToolsPage = ({ rates }) => {
 
       <div className="tool-fullscreen-content">
         {selectedTool === 'window-costing' && <CostingPage rates={rates} />}
+        {selectedTool === 'cutting-measuring' && <CuttingMeasuringTool />}
       </div>
     </div>
   );

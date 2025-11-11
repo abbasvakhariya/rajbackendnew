@@ -245,7 +245,7 @@
     width: 100%;
     min-width: unset;
   }
-}
+  }
   
   .form-group input {
     padding: 1rem;
@@ -512,6 +512,13 @@
     font-size: 1.5rem;
   }
   
+  .windows-list-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+  
+  .generate-cutting-list-btn,
   .clear-all-btn {
     width: 100%;
     padding: 0.875rem;
@@ -523,6 +530,31 @@
   color: #2c3e50;
   margin: 0;
   font-size: 1.8rem;
+}
+
+.windows-list-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.generate-cutting-list-btn {
+  padding: 0.625rem 1.25rem;
+  border: 2px solid #22c55e;
+  border-radius: 8px;
+  background: white;
+  color: #22c55e;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.generate-cutting-list-btn:hover {
+  background: #22c55e;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
 }
 
 .clear-all-btn {
@@ -839,6 +871,11 @@
     align-items: flex-start;
   }
   
+  .windows-list-actions {
+    width: 100%;
+  }
+  
+  .generate-cutting-list-btn,
   .clear-all-btn {
     width: 100%;
   }
@@ -1317,24 +1354,18 @@
     text-align: center;
   }
   
-  /* Batch Modal Mobile - FULL SCREEN */
+  /* Batch Modal Mobile - Full Screen */
   .batch-modal {
     max-width: 100vw;
     max-height: 100vh;
     margin: 0;
     border-radius: 0;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
   }
   
   .batch-modal-header {
-    padding: 1rem;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    padding: 0.875rem;
   }
   
   .batch-modal-header h2 {
@@ -1343,94 +1374,75 @@
   
   .batch-modal-body {
     padding: 0.75rem;
-    height: calc(100vh - 140px);
-    overflow-y: auto;
   }
   
   .batch-config-display {
     padding: 0.75rem;
-    font-size: 0.75rem;
-    margin-bottom: 0.75rem;
-    background: #e3f2fd;
-    border-radius: 6px;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
   }
   
   /* Mobile-optimized table - NO horizontal scroll */
   .batch-table-container {
-    overflow-x: hidden;
-    overflow-y: visible;
+    overflow-x: visible;
     border: none;
     margin-bottom: 1rem;
-    width: 100%;
   }
   
   .batch-table {
+    min-width: 100%;
     width: 100%;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     table-layout: fixed;
-    border-collapse: collapse;
   }
   
   .batch-table thead th {
-    padding: 0.5rem 0.2rem;
+    padding: 0.5rem 0.25rem;
     font-size: 0.7rem;
-    line-height: 1.1;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    position: sticky;
-    top: 0;
-    background: white;
-    z-index: 1;
+    line-height: 1.2;
+    white-space: normal;
+    word-break: break-word;
   }
   
   .batch-table tbody td {
-    padding: 0.25rem 0.2rem;
-    vertical-align: middle;
+    padding: 0.35rem 0.25rem;
   }
   
   .batch-table input {
-    padding: 0.4rem 0.3rem;
+    padding: 0.45rem 0.35rem;
     font-size: 14px;
-    min-height: 40px;
-    width: 100%;
-    border-radius: 4px;
+    min-height: 38px;
   }
   
   /* Text wrapping for name column */
   .batch-col-name input {
     word-break: break-word;
-    font-size: 13px;
   }
   
-  /* Mobile column widths - Optimized for NO scroll */
+  /* Mobile column widths - Fit in one row */
   .batch-col-number {
-    width: 7%;
-    min-width: 25px;
-    text-align: center;
-    padding: 0.25rem 0.1rem !important;
+    width: 8%;
+    padding: 0.35rem 0.15rem !important;
   }
   
   .batch-col-name {
-    width: 28%;
+    width: 30%;
     min-width: unset;
   }
   
   .batch-col-dimension {
-    width: 22%;
+    width: 20%;
     min-width: unset;
   }
   
   .batch-col-dora {
-    width: 13%;
+    width: 12%;
     min-width: unset;
   }
   
   .batch-col-action {
-    width: 8%;
-    min-width: 30px;
-    padding: 0.25rem 0.1rem !important;
-    text-align: center;
+    width: 10%;
+    padding: 0.35rem 0.15rem !important;
   }
   
   /* Close button larger on mobile */
@@ -1453,46 +1465,28 @@
   .batch-modal-actions {
     flex-direction: column;
     gap: 0.75rem;
-    position: sticky;
-    bottom: 0;
-    background: white;
-    padding: 1rem 0.75rem;
-    border-top: 2px solid #e0e0e0;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
-    margin: 0 -0.75rem;
   }
   
   .add-row-btn {
     width: 100%;
     padding: 0.875rem;
     min-height: 48px;
-    font-size: 0.95rem;
-    font-weight: 600;
   }
   
   .batch-modal-buttons {
     width: 100%;
     flex-direction: column-reverse;
-    gap: 0.5rem;
   }
   
   .batch-modal-buttons .modal-btn {
     width: 100%;
-    min-height: 50px;
-    font-size: 1rem;
-    font-weight: 600;
+    min-height: 48px;
+    font-size: 0.95rem;
   }
   
   /* Full screen modal overlay on mobile */
   .modal-overlay {
     padding: 0;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
-    background: rgba(0, 0, 0, 0.7);
   }
 }
 

@@ -2,16 +2,29 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
+  min-height: 60vh;
 }
 
 .tool-settings-page {
   max-width: 1400px;
   margin: 0 auto;
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Prevent blink with smooth fade-in */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Tool Selection Screen */
 .tools-list-container {
   padding: 2rem;
+  animation: fadeIn 0.3s ease-in;
 }
 
 .tools-list-header {
@@ -383,6 +396,7 @@
 /* Cutting Measuring Tool Styles */
 .cutting-tool-content {
   padding: 2rem;
+  animation: fadeIn 0.3s ease-in;
 }
 
 .profiles-header {
@@ -638,10 +652,51 @@
   color: #9ca3af;
 }
 
-.materials-grid {
+.materials-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.material-item {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+}
+
+.material-title {
+  margin: 0 0 1rem 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.material-inputs {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  grid-template-columns: 2fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.material-inputs .form-group-profile {
+  margin-bottom: 0;
+}
+
+.total-display {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f59e0b;
+  padding: 0.75rem 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #f59e0b;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
 }
 
 .profile-modal-footer {
@@ -782,8 +837,15 @@
     padding: 1rem;
   }
   
-  .materials-grid {
+  .material-inputs {
     grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .total-display {
+    padding: 0.5rem;
+    font-size: 14px;
+    justify-content: center;
   }
   
   .profile-modal-footer {

@@ -103,7 +103,7 @@ Vercel Dashboard → Your Project → Settings → Environment Variables
 - NOT: `API_URL` or `REACT_APP_API_URL`
 
 ### ❌ Wrong: Wrong value
-- Must be: `https://windowmanagementsystem.onrender.com/api`
+- Must be: `image.png`
 - NOT: `http://localhost:5000/api`
 - NOT: `https://windowmanagementsystem.onrender.com` (missing `/api`)
 

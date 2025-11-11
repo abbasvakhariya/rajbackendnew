@@ -52,8 +52,17 @@ export const calculatePerimeter = (length, width, unit = 'feet') => {
   return 2 * (lengthFeet + widthFeet);
 };
 
-// Calculate cost for Mini Domal (Sliding Window)
-export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, hasMosquitoNet = false, hasGrill = false, numberOfPipes = 0) => {
+// Calculate cost for Sliding Window (works for all subcategories: miniDomal, domal, ventena, and custom categories)
+export const calculateSlidingWindowCost = (dimensions, tracks, glassType, rates, hasMosquitoNet = false, hasGrill = false, numberOfPipes = 0, categorySettings = null) => {
+  // Use category settings if provided, otherwise use defaults
+  const outerFrameKgPerFt = categorySettings?.outerFrameKg ?? 0.200;
+  const shutterFrameKgPerFt = categorySettings?.shutterFrameKg ?? 0.175;
+  const innerLockClipKgPerFt = categorySettings?.innerLockClipKg ?? 0.0625;
+  const cChannelKgPerFt = categorySettings?.cChannelKg ?? 0.0625;
+  const rtKgPerFt = categorySettings?.rtKg ?? 0.125;
+  const roundPipeKgPerFt = categorySettings?.roundPipeKg ?? 0.0625;
+  const outerFrameKgWithNet = categorySettings?.outerFrameKgWithNet ?? 0.26875;
+  const outerFrameKgWithGrill = categorySettings?.outerFrameKgWithGrill ?? 0.2625;
   const { length, width, unit, lengthDora = 0, widthDora = 0 } = dimensions;
   
   // For windows: length = horizontal dimension (width), width = vertical dimension (height)
@@ -107,30 +116,104 @@ export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, has
       glassRubberCost, woolfileLength, woolfileCost, labourCost, 
       fixedChargeCost, mosquitoNetCost;
 
-  // Different calculation logic for grill
-  if (hasGrill && numberOfPipes > 0) {
-    // 1. Outer Frame: 2(l+h) * 0.200kg * 345rs
+  // Different calculation logic based on configuration
+  // 2 Track + Mosquito + Grill
+  if (hasGrill && hasMosquitoNet && numberOfPipes > 0) {
+    // 1. Outer Frame: 2(l+h) * outerFrameKgWithGrill * 345rs
     const outerFrameLength = 2 * (l + h);
-    outerFrameKg = outerFrameLength * 0.2625;
+    outerFrameKg = outerFrameLength * outerFrameKgWithGrill;
     outerFrameCost = outerFrameKg * materialRate;
     
-    // 2. Shutter Frame: (2(l+h) + track * height) * 0.175kg * 345rs
+    // 2. Shutter Frame: (3((l/2)+h) * shutterFrameKgPerFt * 345rs
+    const shutterFrameLength = 3 * ((l/2) + h);
+    shutterFrameKg = shutterFrameLength * shutterFrameKgPerFt;
+    const shutterFrameBaseCost = shutterFrameKg * materialRate;
+    
+    // C-Channel cost: (2 * ((l/2) + h) * cChannelKgPerFt) * 345rs
+    const cChannelLength = 2 * ((l/2) + h);
+    cChannelKg = cChannelLength * cChannelKgPerFt;
+    cChannelCost = cChannelKg * materialRate;
+    
+    // Shutter Frame Total Cost = Base Shutter Frame Cost + C-Channel Cost
+    shutterFrameCost = shutterFrameBaseCost + cChannelCost;
+    
+    // 3. Inner Lock Clip: 3 * height * innerLockClipKgPerFt * 345rs
+    innerLockClipKg = 3 * h * innerLockClipKgPerFt;
+    innerLockClipCost = innerLockClipKg * materialRate;
+    
+    // 4. RT: h * rtKgPerFt * 345rs
+    rtKg = h * rtKgPerFt;
+    rtCost = rtKg * materialRate;
+    
+    // 5. Round Pipe: length * no of pipe required * roundPipeKgPerFt * 345rs
+    roundPipeKg = l * numberOfPipes * roundPipeKgPerFt;
+    roundPipeCost = roundPipeKg * materialRate;
+    
+    // 6. Coating: (outerframekg + shutterframe kg + c-channel kg + innerlockclipkg + rt kg + round pipe kg) * 60rs
+    totalKg = outerFrameKg + shutterFrameKg + cChannelKg + innerLockClipKg + rtKg + roundPipeKg;
+    coatingCost = totalKg * coatingRate;
+    
+    // 7. Glass: l*h * glass type price per sqft
+    glassArea = l * h;
+    glassCost = glassArea * glassRate;
+    
+    // 8. Lock: 2 * 100rs
+    lockCost = 2 * (rates?.lockPerTrack || defaultRates.lockPerTrack);
+    
+    // 9. Bearing: 2 * 3 * 20rs
+    bearingCost = 2 * 3 * (rates?.bearingPerUnit || defaultRates.bearingPerUnit);
+    
+    // 10. Clamp: Outer clamp = 8, Inner clamp = 12, Total 20 * 20rs
+    outerClampCost = 8 * (rates?.clampPerUnit || defaultRates.clampPerUnit);
+    innerClampCost = 12 * (rates?.clampPerUnit || defaultRates.clampPerUnit);
+    totalClampCost = outerClampCost + innerClampCost;
+    
+    // 11. Glass Rubber: (2(l+h) + 2*no of track) * 8rs
+    glassRubberLength = 4 * ((l/2) + h);
+    glassRubberCost = glassRubberLength * (rates?.glassRubberPerFeet || defaultRates.glassRubberPerFeet);
+    
+    // 12. Woolfile: (2 * ((2 * (l + h) + track * h) + (2 * h))) * 2rs
+    woolfileLength = 2 * ((2 * (l + h) + tracks * h) + (2 * h));
+    woolfileCost = woolfileLength * (rates?.woolfilePerFeet || defaultRates.woolfilePerFeet);
+    
+    // 13. Mosquito Net: ((l/2) * h) * rate per sqft
+    const mosquitoNetArea = (l / 2) * h;
+    const mosquitoNetRate = rates?.mosquitoNetPerSqft || defaultRates.mosquitoNetPerSqft;
+    mosquitoNetCost = mosquitoNetArea * mosquitoNetRate;
+    
+    // 14. Labour: area * 50rs
+    labourCost = area * (rates?.labourPerSqft || defaultRates.labourPerSqft);
+    
+    // 15. Fixed Charge: 30rs
+    fixedChargeCost = rates?.fixedCharge || defaultRates.fixedCharge;
+    
+    brightBarCost = 0;
+    coverCost = 0;
+    
+  } else if (hasGrill && numberOfPipes > 0) {
+    // 2 Track + Grill (without mosquito net)
+    // 1. Outer Frame: 2(l+h) * outerFrameKgWithGrill * 345rs
+    const outerFrameLength = 2 * (l + h);
+    outerFrameKg = outerFrameLength * outerFrameKgWithGrill;
+    outerFrameCost = outerFrameKg * materialRate;
+    
+    // 2. Shutter Frame: (2(l+h) + track * height) * shutterFrameKgPerFt * 345rs
     const shutterFrameLength = 2 * (l + h) + tracks * h;
-    shutterFrameKg = shutterFrameLength * 0.175;
+    shutterFrameKg = shutterFrameLength * shutterFrameKgPerFt;
     shutterFrameCost = shutterFrameKg * materialRate;
     cChannelKg = 0;
     cChannelCost = 0;
     
-    // 3. Inner Lock Clip: no of track * height * 0.0625kg * 345rs
-    innerLockClipKg = tracks * h * 0.0625;
+    // 3. Inner Lock Clip: no of track * height * innerLockClipKgPerFt * 345rs
+    innerLockClipKg = tracks * h * innerLockClipKgPerFt;
     innerLockClipCost = innerLockClipKg * materialRate;
     
-    // 4. RT: h * 0.25kg * 345rs
-    rtKg = h * 0.125;
+    // 4. RT: h * rtKgPerFt * 345rs
+    rtKg = h * rtKgPerFt;
     rtCost = rtKg * materialRate;
     
-    // 5. Round Pipe: width * no of pipe required * 0.0625kg * 345rs
-    roundPipeKg = l * numberOfPipes * 0.0625;
+    // 5. Round Pipe: width * no of pipe required * roundPipeKgPerFt * 345rs
+    roundPipeKg = l * numberOfPipes * roundPipeKgPerFt;
     roundPipeCost = roundPipeKg * materialRate;
     
     // 6. Coating: (outerframe kg + shutterframe kg + innerlockclip kg + rt kg + round pipe kg) * 60rs
@@ -179,25 +262,25 @@ export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, has
   } else if (hasMosquitoNet) {
     // 1. Outer Frame: outerFrameLength * 0.26875kg * 345rs
     const outerFrameLength = 2 * (l + h);
-    outerFrameKg = outerFrameLength * 0.26875;
+    outerFrameKg = outerFrameLength * outerFrameKgWithNet;
     outerFrameCost = outerFrameKg * materialRate;
     
     // 2. Shutter Frame: ((2 * (l + h) + tracks * h) * 0.175 * 345rs) + c-channel cost
     // First calculate base shutter frame: (2 * (l + h) + tracks * h) * 0.175 * 345rs
     const shutterFrameLength = (2 * ((l/2) + h))*3;
-    shutterFrameKg = shutterFrameLength * 0.175;
+    shutterFrameKg = shutterFrameLength * shutterFrameKgPerFt;
     const shutterFrameBaseCost = shutterFrameKg * materialRate;
     
     // Then add C-Channel cost: (2 * ((l/2) + h) * 0.0625kg) * 345rs
     const cChannelLength = 2 * ((l / 2) + h);
-    cChannelKg = cChannelLength * 0.0625;
+    cChannelKg = cChannelLength * cChannelKgPerFt;
     cChannelCost = cChannelKg * materialRate;
     
     // Shutter Frame Total Cost = Base Shutter Frame Cost + C-Channel Cost
     shutterFrameCost = shutterFrameBaseCost + cChannelCost;
     
     // 3. Inner Lock Clip: (tracks * h * 0.0625kg) * 345rs
-    innerLockClipKg = 3 * h * 0.0625;
+    innerLockClipKg = 3 * h * innerLockClipKgPerFt;
     innerLockClipCost = innerLockClipKg * materialRate;
     
     // 4. Coating: (outerframekg + shutterframe kg + c-channel kg + innerlockclipkg) * 60rs
@@ -242,18 +325,18 @@ export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, has
     // Original calculation logic for 2 tracks without mosquito net
     // 1. Outer Frame: 2(l+h) * 0.200kg * 345 rs
     const outerFrameLength = 2 * (l + h);
-    outerFrameKg = outerFrameLength * 0.200;
+    outerFrameKg = outerFrameLength * outerFrameKgPerFt;
     outerFrameCost = outerFrameKg * materialRate;
     
     // 2. Shutter Frame: (2(l+h) + track * height) * 0.175kg * 345 rs
     const shutterFrameLength = 2 * (l + h) + tracks * h;
-    shutterFrameKg = shutterFrameLength * 0.175;
+    shutterFrameKg = shutterFrameLength * shutterFrameKgPerFt;
     shutterFrameCost = shutterFrameKg * materialRate;
     cChannelKg = 0;
     cChannelCost = 0;
   
   // 3. Inner Lock Clip: no of track * height * 0.0625kg * 345rs
-    innerLockClipKg = tracks * h * 0.0625;
+    innerLockClipKg = tracks * h * innerLockClipKgPerFt;
     innerLockClipCost = innerLockClipKg * materialRate;
   
   // 4. Coating Charge: (outerframe kg + shutter frame kg + inner lock clip kg) * 60 rs
@@ -361,11 +444,11 @@ export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, has
         cost: outerClampCost
       },
       innerClamp: {
-        quantity: hasGrill ? 8 : (hasMosquitoNet ? 12 : (tracks * 4)),
+        quantity: hasGrill && hasMosquitoNet ? 12 : (hasGrill ? 8 : (hasMosquitoNet ? 12 : (tracks * 4))),
         cost: innerClampCost
       },
       totalClamp: {
-        quantity: hasMosquitoNet ? 16 : (hasGrill ? 16 : undefined),
+        quantity: hasGrill && hasMosquitoNet ? 20 : (hasMosquitoNet ? 16 : (hasGrill ? 16 : undefined)),
         cost: totalClampCost || (outerClampCost + innerClampCost)
       },
       glassRubber: {
@@ -384,7 +467,7 @@ export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, has
         cost: fixedChargeCost
       },
       mosquitoNet: {
-        area: hasMosquitoNet ? ((l / 2) * h) : 0,
+        area: (hasMosquitoNet && hasGrill) || hasMosquitoNet ? ((l / 2) * h) : 0,
         cost: mosquitoNetCost
       },
       rt: {
@@ -410,19 +493,65 @@ export const calculateMiniDomalCost = (dimensions, tracks, glassType, rates, has
 
 // Main cost calculator function
 export const calculateWindowCost = (category, subCategory, dimensions, options = {}, rates = {}) => {
+  // Check for custom categories first
+  try {
+    const savedSettings = localStorage.getItem('toolSettings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      if (parsed.customCategories && parsed.customCategories[category] && parsed.customCategories[category][subCategory]) {
+        const customCategory = parsed.customCategories[category][subCategory];
+        const template = customCategory.calculationTemplate || 'miniDomal';
+        
+        // Use the template's calculation but with custom category's settings
+        // For now, we'll use the template calculation function
+        // The custom weights are stored in customCategory but we need to pass them
+        // All templates use the same calculation logic, just with different weight settings
+        return calculateSlidingWindowCost(
+          dimensions,
+          options.tracks || 2,
+          options.glassType || 'plane',
+          rates,
+          options.hasMosquitoNet || false,
+          options.hasGrill || false,
+          options.numberOfPipes || 0,
+          customCategory // Pass custom category settings
+        );
+        // Add domal and ventena templates when their functions are available
+      }
+    }
+  } catch (e) {
+    console.error('Error loading custom categories:', e);
+  }
+
+  // Standard categories - get settings from localStorage
   if (category === 'sliding') {
-    if (subCategory === 'miniDomal') {
-      return calculateMiniDomalCost(
+    let categorySettings = null;
+    
+    try {
+      const savedSettings = localStorage.getItem('toolSettings');
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        if (parsed.windowCosting && parsed.windowCosting[subCategory]) {
+          categorySettings = parsed.windowCosting[subCategory];
+        }
+      }
+    } catch (e) {
+      console.error('Error loading category settings:', e);
+    }
+    
+    // Use dynamic calculation for all sliding window subcategories
+    if (subCategory === 'miniDomal' || subCategory === 'domal' || subCategory === 'ventena') {
+      return calculateSlidingWindowCost(
         dimensions,
         options.tracks || 2,
         options.glassType || 'plane',
         rates,
         options.hasMosquitoNet || false,
         options.hasGrill || false,
-        options.numberOfPipes || 0
+        options.numberOfPipes || 0,
+        categorySettings // Pass category-specific settings
       );
     }
-    // Add other subcategories (domal, ventena) here later
   }
   
   // Add openable window calculations here later
