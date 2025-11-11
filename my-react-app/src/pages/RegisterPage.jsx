@@ -53,21 +53,29 @@ const RegisterPage = () => {
     }
 
     setLoading(true);
-    const response = await register({
-      email: formData.email,
-      password: formData.password,
-      fullName: formData.fullName,
-      companyName: formData.companyName || '',
-      phone: formData.phone || ''
-    });
-    setLoading(false);
+    try {
+      const response = await register({
+        email: formData.email,
+        password: formData.password,
+        fullName: formData.fullName,
+        companyName: formData.companyName || '',
+        phone: formData.phone || ''
+      });
+      setLoading(false);
 
-    if (response.success) {
-      setMessage('Registration successful! Please verify your email with the OTP sent to your inbox.');
-      setStep('verify');
-      setCountdown(60);
-    } else {
-      setError(response.message || 'Registration failed');
+      if (response && response.success) {
+        setMessage('Registration successful! Please verify your email with the OTP sent to your inbox.');
+        setStep('verify');
+        setCountdown(60);
+      } else {
+        setError(response?.message || 'Registration failed. Please try again.');
+        console.error('Registration failed:', response);
+      }
+    } catch (err) {
+      setLoading(false);
+      const errorMessage = err?.message || 'Registration failed. Please check your connection and try again.';
+      setError(errorMessage);
+      console.error('Registration error:', err);
     }
   };
 
@@ -82,16 +90,24 @@ const RegisterPage = () => {
     }
 
     setLoading(true);
-    const response = await verifyEmail(formData.email, otp);
-    setLoading(false);
+    try {
+      const response = await verifyEmail(formData.email, otp);
+      setLoading(false);
 
-    if (response.success) {
-      setMessage('Email verified successfully! Redirecting to login...');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    } else {
-      setError(response.message || 'Verification failed');
+      if (response && response.success) {
+        setMessage('Email verified successfully! Redirecting to login...');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      } else {
+        setError(response?.message || 'Verification failed. Please check your OTP and try again.');
+        console.error('Verification failed:', response);
+      }
+    } catch (err) {
+      setLoading(false);
+      const errorMessage = err?.message || 'Verification failed. Please check your connection and try again.';
+      setError(errorMessage);
+      console.error('Verification error:', err);
     }
   };
 

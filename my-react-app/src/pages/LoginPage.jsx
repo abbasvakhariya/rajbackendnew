@@ -40,16 +40,24 @@ const LoginPage = () => {
     }
 
     setLoading(true);
-    const response = await requestLoginOTP(email);
-    setLoading(false);
+    try {
+      const response = await requestLoginOTP(email);
+      setLoading(false);
 
-    if (response.success) {
-      setMessage('OTP sent to your email. Please check your inbox.');
-      setStep('otp');
-      setOtpSent(true);
-      setCountdown(60); // 60 seconds countdown
-    } else {
-      setError(response.message || 'Failed to send OTP');
+      if (response && response.success) {
+        setMessage('OTP sent to your email. Please check your inbox.');
+        setStep('otp');
+        setOtpSent(true);
+        setCountdown(60); // 60 seconds countdown
+      } else {
+        setError(response?.message || 'Failed to send OTP. Please try again.');
+        console.error('OTP request failed:', response);
+      }
+    } catch (err) {
+      setLoading(false);
+      const errorMessage = err?.message || 'Failed to send OTP. Please check your connection and try again.';
+      setError(errorMessage);
+      console.error('OTP request error:', err);
     }
   };
 
@@ -64,15 +72,23 @@ const LoginPage = () => {
     }
 
     setLoading(true);
-    const response = await login(email, otp);
-    setLoading(false);
+    try {
+      const response = await login(email, otp);
+      setLoading(false);
 
-    if (response.success) {
-      navigate('/tools');
-    } else if (response.deviceConflict) {
-      setError('Another device is already logged in. Please logout from the other device first.');
-    } else {
-      setError(response.message || 'Login failed. Please check your OTP.');
+      if (response && response.success) {
+        navigate('/tools');
+      } else if (response?.deviceConflict) {
+        setError('Another device is already logged in. Please logout from the other device first.');
+      } else {
+        setError(response?.message || 'Login failed. Please check your OTP and try again.');
+        console.error('Login failed:', response);
+      }
+    } catch (err) {
+      setLoading(false);
+      const errorMessage = err?.message || 'Login failed. Please check your connection and try again.';
+      setError(errorMessage);
+      console.error('Login error:', err);
     }
   };
 

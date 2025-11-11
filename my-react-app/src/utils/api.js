@@ -67,7 +67,13 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 
   try {
+    // Log the request for debugging
+    console.log(`🌐 API Request: ${config.method || 'GET'} ${API_URL}${endpoint}`);
+    
     const response = await fetch(`${API_URL}${endpoint}`, config);
+    
+    // Log response status
+    console.log(`📡 API Response: ${response.status} ${response.statusText} for ${endpoint}`);
     
     // Handle cases where response is not JSON
     let data;
@@ -76,6 +82,7 @@ const apiRequest = async (endpoint, options = {}) => {
       data = await response.json();
     } else {
       const text = await response.text();
+      console.error('❌ Non-JSON response:', text);
       throw new Error(`Server returned non-JSON response: ${text}`);
     }
 
@@ -89,20 +96,24 @@ const apiRequest = async (endpoint, options = {}) => {
         localStorage.removeItem('token');
         throw new Error(data.message || 'User not found. Please login again.');
       }
-      throw new Error(data.message || 'Request failed');
+      console.error('❌ API Error Response:', data);
+      throw new Error(data.message || `Request failed with status ${response.status}`);
     }
 
+    console.log('✅ API Success:', endpoint);
     return data;
   } catch (error) {
     if (error.message === 'DEVICE_CONFLICT') {
       throw error;
     }
     // If it's a network error, provide better message
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      console.error('API Error: Cannot connect to server. Check if backend is running.');
-      throw new Error('Cannot connect to server. Please check your connection.');
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.name === 'TypeError') {
+      console.error('❌ Network Error: Cannot connect to server.');
+      console.error('Backend URL:', API_URL);
+      console.error('Full error:', error);
+      throw new Error('Cannot connect to server. Please check if the backend is running and try again.');
     }
-    console.error('API Error:', error);
+    console.error('❌ API Error:', error);
     throw error;
   }
 };
