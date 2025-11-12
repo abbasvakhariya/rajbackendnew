@@ -55,7 +55,16 @@ const LoginPage = () => {
       }
     } catch (err) {
       setLoading(false);
-      const errorMessage = err?.message || 'Failed to send OTP. Please check your connection and try again.';
+      let errorMessage = err?.message || 'Failed to send OTP. Please check your connection and try again.';
+      
+      // Provide helpful message for network errors
+      if (errorMessage.includes('Cannot connect to server') || errorMessage.includes('Failed to fetch')) {
+        errorMessage = '⚠️ Cannot connect to backend server. ';
+        errorMessage += 'If you\'re on the free Render plan, the server might be sleeping. ';
+        errorMessage += 'Please wait 30-60 seconds and try again. ';
+        errorMessage += 'The server will wake up automatically.';
+      }
+      
       setError(errorMessage);
       console.error('OTP request error:', err);
     }
@@ -86,7 +95,16 @@ const LoginPage = () => {
       }
     } catch (err) {
       setLoading(false);
-      const errorMessage = err?.message || 'Login failed. Please check your connection and try again.';
+      let errorMessage = err?.message || 'Login failed. Please check your connection and try again.';
+      
+      // Provide helpful message for network errors
+      if (errorMessage.includes('Cannot connect to server') || errorMessage.includes('Failed to fetch')) {
+        errorMessage = '⚠️ Cannot connect to backend server. ';
+        errorMessage += 'If you\'re on the free Render plan, the server might be sleeping. ';
+        errorMessage += 'Please wait 30-60 seconds and try again. ';
+        errorMessage += 'The server will wake up automatically.';
+      }
+      
       setError(errorMessage);
       console.error('Login error:', err);
     }

@@ -81,7 +81,16 @@ const RegisterPage = () => {
       }
     } catch (err) {
       setLoading(false);
-      const errorMessage = err?.message || 'Registration failed. Please check your connection and try again.';
+      let errorMessage = err?.message || 'Registration failed. Please check your connection and try again.';
+      
+      // Provide helpful message for network errors
+      if (errorMessage.includes('Cannot connect to server') || errorMessage.includes('Failed to fetch')) {
+        errorMessage = '⚠️ Cannot connect to backend server. ';
+        errorMessage += 'If you\'re on the free Render plan, the server might be sleeping. ';
+        errorMessage += 'Please wait 30-60 seconds and try again. ';
+        errorMessage += 'The server will wake up automatically.';
+      }
+      
       setError(errorMessage);
       console.error('Registration error:', err);
     }

@@ -111,7 +111,17 @@ const apiRequest = async (endpoint, options = {}) => {
       console.error('❌ Network Error: Cannot connect to server.');
       console.error('Backend URL:', API_URL);
       console.error('Full error:', error);
-      throw new Error('Cannot connect to server. Please check if the backend is running and try again.');
+      
+      // Provide more helpful error message based on environment
+      let errorMessage = 'Cannot connect to server. ';
+      if (import.meta.env.PROD) {
+        errorMessage += 'The backend might be sleeping (Render free tier). Please wait 30 seconds and try again. ';
+        errorMessage += `Backend URL: ${API_URL}`;
+      } else {
+        errorMessage += 'Please check if the backend is running on ' + API_URL;
+      }
+      
+      throw new Error(errorMessage);
     }
     console.error('❌ API Error:', error);
     throw error;
