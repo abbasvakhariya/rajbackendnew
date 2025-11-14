@@ -1,7 +1,7 @@
 # Backend Deployment Guide (Render)
 
 ## Current Deployment
-- **URL**: https://rajwindow.onrender.com
+- **URL**: https://rajwindow-4wrx.onrender.com
 - **Repository**: https://github.com/abbasvakhariya/rajbackendnew
 
 ## Render Setup Instructions
@@ -41,15 +41,15 @@ NODE_ENV=production
 1. Click "Create Web Service"
 2. Render will automatically build and deploy
 3. Wait for deployment to complete
-4. Your API will be available at: `https://rajwindow.onrender.com`
+4. Your API will be available at: `https://rajwindow-4wrx.onrender.com`
 
 ## API Endpoints
 
-- **Health Check**: `https://rajwindow.onrender.com/api/health`
-- **Auth**: `https://rajwindow.onrender.com/api/auth/*`
-- **Users**: `https://rajwindow.onrender.com/api/users/*`
-- **Customers**: `https://rajwindow.onrender.com/api/customers/*`
-- **Products**: `https://rajwindow.onrender.com/api/products/*`
+- **Health Check**: `https://rajwindow-4wrx.onrender.com/api/health`
+- **Auth**: `https://rajwindow-4wrx.onrender.com/api/auth/*`
+- **Users**: `https://rajwindow-4wrx.onrender.com/api/users/*`
+- **Customers**: `https://rajwindow-4wrx.onrender.com/api/customers/*`
+- **Products**: `https://rajwindow-4wrx.onrender.com/api/products/*`
 - And more...
 
 ## Important Notes

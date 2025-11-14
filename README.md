@@ -3,8 +3,8 @@
 ## 🚀 Deployment URLs
 
 - **Frontend**: https://windowsmangement.vercel.app/
-- **Backend**: https://rajwindow.onrender.com
-- **API Base URL**: https://rajwindow.onrender.com/api
+- **Backend**: https://rajwindow-4wrx.onrender.com
+- **API Base URL**: https://rajwindow-4wrx.onrender.com/api
 
 ## 📋 Environment Variables Required
 
