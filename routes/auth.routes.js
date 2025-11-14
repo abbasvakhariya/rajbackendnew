@@ -1,17 +1,25 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import User from '../models/User.model.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-// Generate OTP
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+// Helper to check MongoDB connection
+const checkMongoConnection = (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection unavailable. Please try again later.',
+      error: 'MongoDB not connected'
+    });
+  }
+  next();
 };
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', checkMongoConnection, async (req, res) => {
   try {
     const { email, password, fullName, companyName, phone } = req.body;
 
@@ -24,28 +32,19 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Generate OTP
-    const otp = generateOTP();
-    const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
-
-    // Create user
+    // Create user with email auto-verified
     const user = await User.create({
       email,
       password,
       fullName,
       companyName: companyName || '',
       phone: phone || '',
-      emailVerificationOTP: otp,
-      emailVerificationOTPExpiry: otpExpiry
+      isEmailVerified: true
     });
-
-    // TODO: Send OTP email
-    console.log(`OTP for ${email}: ${otp}`);
 
     res.status(201).json({
       success: true,
-      message: 'Registration successful. Please verify your email.',
+      message: 'Registration successful. You can now login.',
       userId: user._id
     });
   } catch (error) {
@@ -56,165 +55,37 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Verify Email
-router.post('/verify-email', async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    if (user.isEmailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already verified'
-      });
-    }
-
-    if (user.emailVerificationOTP !== otp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid OTP'
-      });
-    }
-
-    if (new Date() > user.emailVerificationOTPExpiry) {
-      return res.status(400).json({
-        success: false,
-        message: 'OTP expired'
-      });
-    }
-
-    user.isEmailVerified = true;
-    user.emailVerificationOTP = null;
-    user.emailVerificationOTPExpiry = null;
-    await user.save();
-
-    res.json({
-      success: true,
-      message: 'Email verified successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// Resend OTP
-router.post('/resend-otp', async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    const otp = generateOTP();
-    const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
-
-    user.emailVerificationOTP = otp;
-    user.emailVerificationOTPExpiry = otpExpiry;
-    await user.save();
-
-    // TODO: Send OTP email
-    console.log(`OTP for ${email}: ${otp}`);
-
-    res.json({
-      success: true,
-      message: 'OTP sent to your email'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// Request Login OTP
-router.post('/request-login-otp', async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    if (!user.isEmailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please verify your email first'
-      });
-    }
-
-    const otp = generateOTP();
-    const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
-
-    user.loginOTP = otp;
-    user.loginOTPExpiry = otpExpiry;
-    await user.save();
-
-    // TODO: Send OTP email
-    console.log(`Login OTP for ${email}: ${otp}`);
-
-    res.json({
-      success: true,
-      message: 'OTP sent to your email'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', checkMongoConnection, async (req, res) => {
   try {
-    const { email, otp, deviceId } = req.body;
+    const { email, password, deviceId } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({
+      return res.status(401).json({
         success: false,
-        message: 'User not found'
+        message: 'Invalid email or password'
       });
     }
 
-    if (user.loginOTP !== otp) {
-      return res.status(400).json({
+    // Verify password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
         success: false,
-        message: 'Invalid OTP'
+        message: 'Invalid email or password'
       });
     }
 
-    if (new Date() > user.loginOTPExpiry) {
-      return res.status(400).json({
-        success: false,
-        message: 'OTP expired'
-      });
-    }
-
-    // Check device conflict
-    if (user.deviceId && user.deviceId !== deviceId) {
+    // Check device conflict (optional - can be removed if not needed)
+    if (deviceId && user.deviceId && user.deviceId !== deviceId) {
       return res.status(409).json({
         success: false,
         code: 'DEVICE_CONFLICT',
@@ -222,11 +93,11 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Update device ID and clear OTP
-    user.deviceId = deviceId;
-    user.loginOTP = null;
-    user.loginOTPExpiry = null;
-    await user.save();
+    // Update device ID
+    if (deviceId) {
+      user.deviceId = deviceId;
+      await user.save();
+    }
 
     // Generate JWT token
     const token = jwt.sign(

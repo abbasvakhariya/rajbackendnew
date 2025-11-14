@@ -26,13 +26,27 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.set('bufferCommands', false); // Disable mongoose buffering
+
+mongoose.connect(process.env.MONGODB_URI, {
+  serverSelectionTimeoutMS: 30000, // Timeout after 30s
+  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+  connectTimeoutMS: 30000, // Connection timeout
+  maxPoolSize: 10, // Maintain up to 10 socket connections
+  minPoolSize: 1, // Maintain at least 1 socket connection
+  retryWrites: true,
+  w: 'majority'
+})
 .then(() => {
   console.log('✅ MongoDB Connected Successfully');
 })
 .catch((error) => {
-  console.error('❌ MongoDB Connection Error:', error);
-  process.exit(1);
+  console.error('❌ MongoDB Connection Error:', error.message);
+  console.log('⚠️  Server will continue running, but database operations will fail');
+  console.log('⚠️  Please check:');
+  console.log('   1. Your MongoDB Atlas IP whitelist (Network Access)');
+  console.log('   2. Your network/firewall settings');
+  console.log('   3. MongoDB connection string in .env file');
 });
 
 // Routes
