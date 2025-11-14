@@ -1,6 +1,25 @@
-# Window Management System - Backend API
+# Windows Management System - Backend API
 
-## Setup Instructions
+## 🚀 Deployment URLs
+
+- **Frontend**: https://windowsmangement.vercel.app/
+- **Backend**: https://rajwindow.onrender.com
+- **API Base URL**: https://rajwindow.onrender.com/api
+
+## 📋 Environment Variables Required
+
+Set these in your Render dashboard (Environment tab):
+
+```
+MONGODB_URI=mongodb+srv://abbas:abbas123@abbas.tdhnt9r.mongodb.net/windows-management-system?retryWrites=true&w=majority&appName=abbas
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+JWT_EXPIRE=7d
+PORT=5000
+NODE_ENV=production
+FRONTEND_URL=https://windowsmangement.vercel.app
+```
+
+## 🔧 Setup Instructions
 
 1. **Install Dependencies**
 ```bash
@@ -8,32 +27,10 @@ npm install
 ```
 
 2. **Configure Environment Variables**
-Create a `.env` file in the backend directory with:
-```
-PORT=5000
-NODE_ENV=development
-MONGODB_URI=your-mongodb-connection-string
-JWT_SECRET=your-secret-key
-JWT_EXPIRE=7d
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
-PAYPAL_MODE=sandbox
-PAYPAL_CLIENT_ID=your-paypal-client-id
-PAYPAL_CLIENT_SECRET=your-paypal-client-secret
-FRONTEND_URL=http://localhost:5173
-ADMIN_EMAIL=admin@windowmanagement.com
-ADMIN_PASSWORD=admin123
-```
+   - For local: Create `.env` file (see `.env.example`)
+   - For Render: Set in Render dashboard → Environment tab
 
-3. **Create Admin User**
-Run this once to create admin user:
-```bash
-node scripts/createAdmin.js
-```
-
-4. **Start Server**
+3. **Start Server**
 ```bash
 # Development
 npm run dev
@@ -42,24 +39,31 @@ npm run dev
 npm start
 ```
 
-## API Endpoints
+## 📡 API Endpoints
 
 ### Authentication
 - `POST /api/auth/register` - Register new user
-- `POST /api/auth/verify-email` - Verify email with OTP
-- `POST /api/auth/request-login-otp` - Request login OTP
-- `POST /api/auth/login` - Login with OTP
+- `POST /api/auth/login` - Login with email and password
 - `POST /api/auth/logout` - Logout
 - `GET /api/auth/me` - Get current user
 
-### Subscription
-- `GET /api/subscription/plans` - Get subscription plans
-- `GET /api/subscription/current` - Get current subscription
-- `POST /api/subscription/create-payment` - Create PayPal payment
-- `POST /api/subscription/execute-payment` - Execute payment
-- `POST /api/subscription/cancel` - Cancel subscription
+### Customers
+- `GET /api/customers` - Get all customers
+- `POST /api/customers` - Create customer
+- `PUT /api/customers/:id` - Update customer
+- `DELETE /api/customers/:id` - Delete customer
 
-### Settings
+### Products
+- `GET /api/products` - Get all products
+- `POST /api/products` - Create product
+- `PUT /api/products/:id` - Update product
+- `DELETE /api/products/:id` - Delete product
+
+### Rates & Settings
+- `GET /api/rates` - Get rate configuration
+- `PUT /api/rates` - Update rate configuration
+- `GET /api/tool-settings` - Get tool settings
+- `PUT /api/tool-settings` - Update tool settings
 - `GET /api/settings` - Get user settings
 - `PUT /api/settings` - Update user settings
 
@@ -70,18 +74,28 @@ npm start
 - `DELETE /api/windows/:id` - Delete window
 
 ### Admin
+- `GET /api/admin/stats` - Get dashboard stats
 - `GET /api/admin/users` - Get all users
 - `GET /api/admin/users/:id` - Get user details
 - `PUT /api/admin/users/:id` - Update user
 - `DELETE /api/admin/users/:id` - Delete user
-- `GET /api/admin/stats` - Get dashboard stats
-- `GET /api/admin/subscriptions` - Get all subscriptions
 
-## Deployment on Render
+## 🔐 Admin Setup
 
-1. Connect your GitHub repository
-2. Set environment variables in Render dashboard
-3. Build command: `npm install`
-4. Start command: `npm start`
-5. Add MongoDB connection string to environment variables
+To create admin user with lifetime access:
+```bash
+npm run setup-admin
+```
 
+This will set `abbasvakhariya00@gmail.com` as admin with lifetime subscription.
+
+## 🌐 CORS Configuration
+
+The backend is configured to allow requests from:
+- `https://windowsmangement.vercel.app` (Production)
+- `http://localhost:5173` (Local development)
+- `http://localhost:5174` (Local development)
+
+## 📚 Documentation
+
+See `DEPLOYMENT.md` for detailed deployment instructions.
