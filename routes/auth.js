@@ -31,8 +31,7 @@ router.post('/register', [
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'An account with this email already exists. Please login instead.',
-        code: 'USER_EXISTS'
+        message: 'User already exists with this email'
       });
     }
 
@@ -55,21 +54,13 @@ router.post('/register', [
       subscriptionEndDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
     });
 
-    // Send verification email (don't fail registration if email fails)
-    const emailSent = await sendOTP(email, emailOTP, 'verification');
-    
-    if (!emailSent) {
-      console.warn(`Failed to send verification email to ${email}, but user registered successfully`);
-      // Still return success - user can request resend OTP
-    }
+    // Send verification email
+    await sendOTP(email, emailOTP, 'verification');
 
     res.status(201).json({
       success: true,
-      message: emailSent 
-        ? 'Registration successful. Please verify your email with OTP sent to your inbox.'
-        : 'Registration successful. Please request OTP resend if you did not receive the email.',
-      userId: user._id,
-      emailSent: emailSent
+      message: 'Registration successful. Please verify your email with OTP.',
+      userId: user._id
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -170,15 +161,12 @@ router.post('/resend-otp', [
     user.emailVerificationOTPExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    // Send OTP (don't fail if email fails - OTP is saved in DB)
-    const emailSent = await sendOTP(email, emailOTP, 'verification');
+    // Send OTP
+    await sendOTP(email, emailOTP, 'verification');
 
     res.json({
       success: true,
-      message: emailSent 
-        ? 'OTP sent to your email. Please check your inbox.'
-        : 'OTP generated. If you did not receive the email, please try again in a moment.',
-      emailSent: emailSent
+      message: 'OTP sent to your email'
     });
   } catch (error) {
     console.error('Resend OTP error:', error);
@@ -220,15 +208,12 @@ router.post('/request-login-otp', [
     user.loginOTPExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    // Send OTP (don't fail if email fails - OTP is saved in DB)
-    const emailSent = await sendOTP(email, loginOTP, 'login');
+    // Send OTP
+    await sendOTP(email, loginOTP, 'login');
 
     res.json({
       success: true,
-      message: emailSent 
-        ? 'Login OTP sent to your email. Please check your inbox.'
-        : 'OTP generated. If you did not receive the email, please try again in a moment.',
-      emailSent: emailSent
+      message: 'Login OTP sent to your email'
     });
   } catch (error) {
     console.error('Request login OTP error:', error);
@@ -432,29 +417,22 @@ router.post('/force-logout', [
 // @access  Private
 router.get('/me', protect, checkDevice, async (req, res) => {
   try {
-    // req.user is already populated by protect middleware
-    if (!req.user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found. Please login again.',
-        code: 'USER_NOT_FOUND'
-      });
-    }
+    const user = await User.findById(req.user._id).select('-password');
 
     res.json({
       success: true,
       user: {
-        id: req.user._id,
-        email: req.user.email,
-        fullName: req.user.fullName,
-        companyName: req.user.companyName,
-        phone: req.user.phone,
-        subscriptionTier: req.user.subscriptionTier,
-        subscriptionStatus: req.user.subscriptionStatus,
-        subscriptionStartDate: req.user.subscriptionStartDate,
-        subscriptionEndDate: req.user.subscriptionEndDate,
-        role: req.user.role,
-        isEmailVerified: req.user.isEmailVerified
+        id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        companyName: user.companyName,
+        phone: user.phone,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionStartDate: user.subscriptionStartDate,
+        subscriptionEndDate: user.subscriptionEndDate,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified
       }
     });
   } catch (error) {

@@ -12,50 +12,22 @@ paypal.configure({
   client_secret: process.env.PAYPAL_CLIENT_SECRET
 });
 
-// Get plans from database or return defaults
-const getPlans = async () => {
-  try {
-    const SystemSettings = require('../models/SystemSettings');
-    const plansSetting = await SystemSettings.findOne({ key: 'subscription_plans' });
-    
-    if (plansSetting && plansSetting.value) {
-      return plansSetting.value;
-    }
-    
-    // Default plans
-    return {
-      '1_month': { price: 460, duration: 1, billingCycle: 'monthly', name: '1 Month' },
-      '3_months': { price: 1250, duration: 3, billingCycle: 'quarterly', name: '3 Months' },
-      '6_months': { price: 2200, duration: 6, billingCycle: 'semi_annual', name: '6 Months' },
-      '12_months': { price: 4000, duration: 12, billingCycle: 'annual', name: '12 Months' }
-    };
-  } catch (error) {
-    console.error('Error getting plans:', error);
-    return {
-      '1_month': { price: 460, duration: 1, billingCycle: 'monthly', name: '1 Month' },
-      '3_months': { price: 1250, duration: 3, billingCycle: 'quarterly', name: '3 Months' },
-      '6_months': { price: 2200, duration: 6, billingCycle: 'semi_annual', name: '6 Months' },
-      '12_months': { price: 4000, duration: 12, billingCycle: 'annual', name: '12 Months' }
-    };
-  }
+// Subscription plans
+const PLANS = {
+  '1_month': { price: 460, duration: 1, billingCycle: 'monthly' },
+  '3_months': { price: 1250, duration: 3, billingCycle: 'quarterly' },
+  '6_months': { price: 2200, duration: 6, billingCycle: 'semi_annual' },
+  '12_months': { price: 4000, duration: 12, billingCycle: 'annual' }
 };
 
 // @route   GET /api/subscription/plans
 // @desc    Get available subscription plans
 // @access  Public
-router.get('/plans', async (req, res) => {
-  try {
-    const plans = await getPlans();
-    res.json({
-      success: true,
-      plans
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching plans'
-    });
-  }
+router.get('/plans', (req, res) => {
+  res.json({
+    success: true,
+    plans: PLANS
+  });
 });
 
 // @route   GET /api/subscription/current
@@ -94,7 +66,6 @@ router.get('/current', protect, checkDevice, async (req, res) => {
 router.post('/create-payment', protect, checkDevice, async (req, res) => {
   try {
     const { planType } = req.body;
-    const PLANS = await getPlans();
 
     if (!PLANS[planType]) {
       return res.status(400).json({

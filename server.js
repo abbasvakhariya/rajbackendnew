@@ -14,8 +14,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://rajwindow.vercel.app',
-  'https://windowmanagementsystem.onrender.com'
+  'https://rajwindow.vercel.app'
 ];
 
 app.use(cors({
@@ -25,11 +24,6 @@ app.use(cors({
     
     // Always allow localhost in development
     if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-      return callback(null, true);
-    }
-    
-    // Allow all Vercel deployments (*.vercel.app)
-    if (origin.includes('.vercel.app')) {
       return callback(null, true);
     }
     
@@ -68,25 +62,6 @@ app.use('/api/settings', require('./routes/settings'));
 app.use('/api/windows', require('./routes/windows'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/admin', require('./routes/adminEnhanced'));
-
-// Root route - API information
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Window Management System API',
-    version: '1.0.0',
-    status: 'running',
-    endpoints: {
-      health: '/api/health',
-      auth: '/api/auth',
-      users: '/api/users',
-      subscription: '/api/subscription',
-      settings: '/api/settings',
-      windows: '/api/windows',
-      admin: '/api/admin'
-    },
-    documentation: 'Visit /api/health for server status'
-  });
-});
 
 // Health check
 app.get('/api/health', (req, res) => {
