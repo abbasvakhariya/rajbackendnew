@@ -61,25 +61,45 @@ mongoose.connect(process.env.MONGODB_URI, {
   console.log('   3. MongoDB connection string in .env file');
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/rates', rateRoutes);
-app.use('/api/tool-settings', toolSettingsRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/quotations', quotationRoutes);
-app.use('/api/invoices', invoiceRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/windows', windowRoutes);
-app.use('/api/admin', adminRoutes);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Windows Management System API', 
+    version: '1.0.0',
+    health: '/api/health',
+    status: 'running'
+  });
 });
+
+// Health check (before other routes to ensure it's always available)
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Server is running', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Routes
+try {
+  app.use('/api/auth', authRoutes);
+  app.use('/api/users', userRoutes);
+  app.use('/api/rates', rateRoutes);
+  app.use('/api/tool-settings', toolSettingsRoutes);
+  app.use('/api/customers', customerRoutes);
+  app.use('/api/products', productRoutes);
+  app.use('/api/quotations', quotationRoutes);
+  app.use('/api/invoices', invoiceRoutes);
+  app.use('/api/orders', orderRoutes);
+  app.use('/api/payments', paymentRoutes);
+  app.use('/api/settings', settingsRoutes);
+  app.use('/api/windows', windowRoutes);
+  app.use('/api/admin', adminRoutes);
+  console.log('✅ All routes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading routes:', error);
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
