@@ -58,7 +58,15 @@ router.post('/register', checkMongoConnection, async (req, res) => {
 // Login
 router.post('/login', checkMongoConnection, async (req, res) => {
   try {
-    const { email, password, deviceId } = req.body;
+    const { email, password, deviceId, otp } = req.body;
+
+    // Reject OTP-based login attempts
+    if (otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP login is no longer supported. Please use password-based login.'
+      });
+    }
 
     if (!email || !password) {
       return res.status(400).json({
@@ -108,6 +116,7 @@ router.post('/login', checkMongoConnection, async (req, res) => {
 
     res.json({
       success: true,
+      message: 'Login successful',
       token,
       user: {
         _id: user._id,
