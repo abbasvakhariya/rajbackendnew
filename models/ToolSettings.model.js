@@ -76,7 +76,7 @@ const toolSettingsSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-toolSettingsSchema.index({ userId: 1 });
+// userId already has unique: true, which creates an index automatically
+// No need for explicit index
 
 export default mongoose.model('ToolSettings', toolSettingsSchema);

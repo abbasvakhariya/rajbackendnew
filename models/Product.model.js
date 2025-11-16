@@ -34,8 +34,7 @@ const productSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-productSchema.index({ userId: 1 });
+// Index for faster queries (compound index covers userId queries too)
 productSchema.index({ userId: 1, name: 1 });
 
 export default mongoose.model('Product', productSchema);

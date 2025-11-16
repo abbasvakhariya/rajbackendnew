@@ -61,8 +61,7 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-orderSchema.index({ userId: 1 });
+// Index for faster queries (compound index covers userId queries too)
 orderSchema.index({ userId: 1, orderNumber: 1 });
 
 export default mongoose.model('Order', orderSchema);

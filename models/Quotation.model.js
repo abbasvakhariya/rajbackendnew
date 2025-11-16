@@ -61,8 +61,7 @@ const quotationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-quotationSchema.index({ userId: 1 });
+// Index for faster queries (compound index covers userId queries too)
 quotationSchema.index({ userId: 1, quotationNumber: 1 });
 
 export default mongoose.model('Quotation', quotationSchema);

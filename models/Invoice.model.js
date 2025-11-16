@@ -69,8 +69,7 @@ const invoiceSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-invoiceSchema.index({ userId: 1 });
+// Index for faster queries (compound index covers userId queries too)
 invoiceSchema.index({ userId: 1, invoiceNumber: 1 });
 
 export default mongoose.model('Invoice', invoiceSchema);

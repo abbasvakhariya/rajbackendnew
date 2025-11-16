@@ -59,8 +59,7 @@ const windowSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-windowSchema.index({ userId: 1 });
+// Index for faster queries (compound index covers userId queries too)
 windowSchema.index({ userId: 1, createdAt: -1 });
 
 export default mongoose.model('Window', windowSchema);

@@ -34,8 +34,7 @@ const customerSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-customerSchema.index({ userId: 1 });
+// Index for faster queries (compound index covers userId queries too)
 customerSchema.index({ userId: 1, name: 1 });
 
 export default mongoose.model('Customer', customerSchema);
