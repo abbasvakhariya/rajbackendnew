@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import User from '../models/User.model.js';
 import { authenticate } from '../middleware/auth.middleware.js';
+import { sendOTP, generateOTP } from '../utils/email.js';
 
 const router = express.Router();
 
@@ -55,44 +56,112 @@ router.post('/register', checkMongoConnection, async (req, res) => {
   }
 });
 
-// Login
+// Request Login OTP
+router.post('/request-login-otp', checkMongoConnection, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    const user = await User.findOne({ email }).select('+loginOTP +loginOTPExpiry');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please verify your email first'
+      });
+    }
+
+    // Generate login OTP
+    const loginOTP = generateOTP();
+    user.loginOTP = loginOTP;
+    user.loginOTPExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await user.save();
+
+    // Send OTP via email
+    const emailSent = await sendOTP(email, loginOTP, 'login');
+    
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP email. Please try again.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Login OTP sent to your email'
+    });
+  } catch (error) {
+    console.error('Request login OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Login with OTP
 router.post('/login', checkMongoConnection, async (req, res) => {
   try {
-    const { email, password, deviceId, otp } = req.body;
+    const { email, otp, deviceId } = req.body;
 
-    // Reject OTP-based login attempts
-    if (otp) {
+    if (!email || !otp) {
       return res.status(400).json({
         success: false,
-        message: 'OTP login is no longer supported. Please use password-based login.'
+        message: 'Email and OTP are required'
       });
     }
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required'
-      });
-    }
-
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+loginOTP +loginOTPExpiry');
+    
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid email or OTP'
       });
     }
 
-    // Verify password
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
+    if (!user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please verify your email first'
+      });
+    }
+
+    // Verify OTP
+    if (!user.loginOTP || user.loginOTP !== otp) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid OTP'
       });
     }
 
-    // Check device conflict (optional - can be removed if not needed)
+    // Check if OTP has expired
+    if (new Date() > user.loginOTPExpiry) {
+      return res.status(401).json({
+        success: false,
+        message: 'OTP has expired. Please request a new one.'
+      });
+    }
+
+    // Clear OTP after successful verification
+    user.loginOTP = null;
+    user.loginOTPExpiry = null;
+
+    // Check device conflict
     if (deviceId && user.deviceId && user.deviceId !== deviceId) {
       return res.status(409).json({
         success: false,
@@ -104,8 +173,9 @@ router.post('/login', checkMongoConnection, async (req, res) => {
     // Update device ID
     if (deviceId) {
       user.deviceId = deviceId;
-      await user.save();
     }
+    
+    await user.save();
 
     // Generate JWT token
     const token = jwt.sign(
@@ -131,6 +201,7 @@ router.post('/login', checkMongoConnection, async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({
       success: false,
       message: error.message

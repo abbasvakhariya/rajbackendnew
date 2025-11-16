@@ -44,11 +44,13 @@ const userSchema = new mongoose.Schema({
   },
   loginOTP: {
     type: String,
-    default: null
+    default: null,
+    select: false
   },
   loginOTPExpiry: {
     type: Date,
-    default: null
+    default: null,
+    select: false
   },
   deviceId: {
     type: String,

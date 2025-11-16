@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 // Create transporter
 const transporter = nodemailer.createTransport({
@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Send OTP email
-exports.sendOTP = async (email, otp, type = 'login') => {
+export const sendOTP = async (email, otp, type = 'login') => {
   try {
     const subject = type === 'login' 
       ? 'Your Login OTP - Window Management System'
@@ -71,7 +71,7 @@ exports.sendOTP = async (email, otp, type = 'login') => {
 };
 
 // Generate random OTP
-exports.generateOTP = () => {
+export const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
