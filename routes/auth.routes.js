@@ -3,7 +3,8 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import User from '../models/User.model.js';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { sendOTP, generateOTP } from '../utils/email.js';
+// OTP functionality removed - using password login instead
+// import { sendOTP, generateOTP } from '../utils/email.js';
 
 const router = express.Router();
 
@@ -198,55 +199,38 @@ router.post('/request-login-otp', checkMongoConnection, async (req, res) => {
   }
 });
 
-// Login with OTP
+// Login with Password
 router.post('/login', checkMongoConnection, async (req, res) => {
   try {
-    const { email, otp, deviceId } = req.body;
+    const { email, password, deviceId } = req.body;
 
-    if (!email || !otp) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email and OTP are required'
+        message: 'Email and password are required'
       });
     }
 
-    const user = await User.findOne({ email }).select('+loginOTP +loginOTPExpiry');
+    // Find user - need to explicitly select password for comparison
+    const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or OTP'
+        message: 'Invalid email or password'
       });
     }
 
-    if (!user.isEmailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please verify your email first'
-      });
-    }
-
-    // Verify OTP
-    if (!user.loginOTP || user.loginOTP !== otp) {
+    // Verify password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid OTP'
+        message: 'Invalid email or password'
       });
     }
 
-    // Check if OTP has expired
-    if (new Date() > user.loginOTPExpiry) {
-      return res.status(401).json({
-        success: false,
-        message: 'OTP has expired. Please request a new one.'
-      });
-    }
-
-    // Clear OTP after successful verification
-    user.loginOTP = null;
-    user.loginOTPExpiry = null;
-
-    // Check device conflict
+    // Check device conflict (optional - can be removed if not needed)
     if (deviceId && user.deviceId && user.deviceId !== deviceId) {
       return res.status(409).json({
         success: false,
@@ -258,14 +242,13 @@ router.post('/login', checkMongoConnection, async (req, res) => {
     // Update device ID
     if (deviceId) {
       user.deviceId = deviceId;
+      await user.save();
     }
-    
-    await user.save();
 
     // Generate JWT token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'default-secret-key-change-in-production',
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
 
@@ -289,7 +272,7 @@ router.post('/login', checkMongoConnection, async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || 'Login failed. Please try again.'
     });
   }
 });
