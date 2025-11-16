@@ -52,10 +52,28 @@ router.post('/register', checkMongoConnection, async (req, res) => {
       isEmailVerified: true
     });
 
+    // Auto-login after registration - generate JWT token
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET || 'default-secret-key-change-in-production',
+      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+    );
+
     res.status(201).json({
       success: true,
-      message: 'Registration successful. You can now login.',
-      userId: user._id
+      message: 'Registration successful. You are now logged in.',
+      token,
+      user: {
+        _id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        companyName: user.companyName,
+        phone: user.phone,
+        role: user.role,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionEndDate: user.subscriptionEndDate
+      }
     });
   } catch (error) {
     res.status(500).json({
