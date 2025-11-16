@@ -9,11 +9,19 @@ const router = express.Router();
 
 // Helper to check MongoDB connection
 const checkMongoConnection = (req, res, next) => {
-  if (mongoose.connection.readyState !== 1) {
+  const mongoState = mongoose.connection.readyState;
+  if (mongoState !== 1) {
+    const states = {
+      0: 'disconnected',
+      2: 'connecting',
+      3: 'disconnecting'
+    };
+    console.error('❌ MongoDB connection check failed. State:', states[mongoState] || 'unknown');
     return res.status(503).json({
       success: false,
-      message: 'Database connection unavailable. Please try again later.',
-      error: 'MongoDB not connected'
+      message: `Database connection unavailable (${states[mongoState] || 'unknown'}). Please try again later.`,
+      error: 'MongoDB not connected',
+      state: mongoState
     });
   }
   next();
@@ -61,6 +69,8 @@ router.post('/request-login-otp', checkMongoConnection, async (req, res) => {
   try {
     const { email } = req.body;
 
+    console.log('📧 OTP request received for email:', email);
+
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -68,8 +78,11 @@ router.post('/request-login-otp', checkMongoConnection, async (req, res) => {
       });
     }
 
-    // Check if email configuration is set
-    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    // Check if email configuration is set (allow development mode)
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    const emailConfigured = process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS;
+    
+    if (!emailConfigured && !isDevelopment) {
       console.error('Email configuration missing:', {
         EMAIL_HOST: !!process.env.EMAIL_HOST,
         EMAIL_USER: !!process.env.EMAIL_USER,
@@ -81,12 +94,24 @@ router.post('/request-login-otp', checkMongoConnection, async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email }).select('+loginOTP +loginOTPExpiry');
+    console.log('🔍 Searching for user with email:', email);
+    let user;
+    try {
+      user = await User.findOne({ email }).select('+loginOTP +loginOTPExpiry');
+      console.log('👤 User found:', user ? 'Yes' : 'No');
+    } catch (dbError) {
+      console.error('Database query error:', dbError);
+      return res.status(500).json({
+        success: false,
+        message: 'Database error while searching for user. Please try again later.'
+      });
+    }
     
     if (!user) {
+      console.log('❌ User not found for email:', email);
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found. Please register first.'
       });
     }
 
@@ -101,27 +126,74 @@ router.post('/request-login-otp', checkMongoConnection, async (req, res) => {
     const loginOTP = generateOTP();
     user.loginOTP = loginOTP;
     user.loginOTPExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-    await user.save();
-
-    // Send OTP via email
-    const emailSent = await sendOTP(email, loginOTP, 'login');
     
-    if (!emailSent) {
+    try {
+      await user.save();
+      console.log('✅ OTP saved for user:', email);
+    } catch (saveError) {
+      console.error('Error saving OTP:', saveError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to send OTP email. Please check email configuration or try again later.'
+        message: 'Error saving OTP. Please try again later.'
       });
     }
 
-    res.json({
-      success: true,
-      message: 'Login OTP sent to your email'
-    });
+    // Send OTP via email (or log in development)
+    if (emailConfigured) {
+      console.log('📨 Sending OTP email to:', email);
+      const emailSent = await sendOTP(email, loginOTP, 'login');
+      
+      if (!emailSent) {
+        // In development, still return success but log OTP
+        if (isDevelopment) {
+          console.log('⚠️  Email sending failed, but in development mode. OTP:', loginOTP);
+          return res.json({
+            success: true,
+            message: `OTP generated (development mode): ${loginOTP}`,
+            otp: loginOTP // Only in development
+          });
+        }
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send OTP email. Please check email configuration or try again later.'
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Login OTP sent to your email'
+      });
+    } else {
+      // Development mode: log OTP to console
+      console.log('⚠️  DEVELOPMENT MODE: Email not configured. OTP for', email, ':', loginOTP);
+      res.json({
+        success: true,
+        message: `OTP generated (check server logs): ${loginOTP}`,
+        otp: loginOTP // Only in development
+      });
+    }
   } catch (error) {
     console.error('Request login OTP error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Server error. Please try again later.';
+    
+    if (error.name === 'MongoServerError' || error.name === 'MongoError') {
+      errorMessage = 'Database error. Please try again later.';
+    } else if (error.name === 'ValidationError') {
+      errorMessage = error.message;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     res.status(500).json({
       success: false,
-      message: error.message || 'Server error. Please try again later.'
+      message: errorMessage
     });
   }
 });

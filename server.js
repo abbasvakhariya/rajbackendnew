@@ -40,7 +40,9 @@ app.use(express.urlencoded({ extended: true }));
 // MongoDB Connection
 mongoose.set('bufferCommands', false); // Disable mongoose buffering
 
-mongoose.connect(process.env.MONGODB_URI, {
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://abbas:abbas123@abbas.tdhnt9r.mongodb.net/windows-management-system?retryWrites=true&w=majority&appName=abbas';
+
+mongoose.connect(MONGODB_URI, {
   serverSelectionTimeoutMS: 30000, // Timeout after 30s
   socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
   connectTimeoutMS: 30000, // Connection timeout
@@ -73,11 +75,23 @@ app.get('/', (req, res) => {
 
 // Health check (before other routes to ensure it's always available)
 app.get('/api/health', (req, res) => {
+  const mongoStatus = mongoose.connection.readyState;
+  const mongoStates = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  
   res.json({ 
     status: 'OK', 
     message: 'Server is running', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      status: mongoStates[mongoStatus] || 'unknown',
+      connected: mongoStatus === 1
+    }
   });
 });
 
