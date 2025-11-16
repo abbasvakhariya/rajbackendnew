@@ -1,19 +1,43 @@
 import nodemailer from 'nodemailer';
 
-// Create transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+// Create transporter with error handling
+let transporter;
+
+try {
+  if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn('⚠️  Email configuration missing. OTP emails will not be sent.');
+  } else {
+    transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT) || 587,
+      secure: process.env.EMAIL_PORT === '465', // true for 465, false for other ports
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    
+    // Verify transporter configuration
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error('❌ Email transporter verification failed:', error.message);
+      } else {
+        console.log('✅ Email transporter configured successfully');
+      }
+    });
   }
-});
+} catch (error) {
+  console.error('❌ Failed to create email transporter:', error.message);
+}
 
 // Send OTP email
 export const sendOTP = async (email, otp, type = 'login') => {
   try {
+    if (!transporter) {
+      console.error('Email transporter not configured');
+      return false;
+    }
+
     const subject = type === 'login' 
       ? 'Your Login OTP - Window Management System'
       : 'Email Verification OTP - Window Management System';

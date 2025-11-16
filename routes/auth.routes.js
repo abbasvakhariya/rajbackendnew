@@ -68,6 +68,19 @@ router.post('/request-login-otp', checkMongoConnection, async (req, res) => {
       });
     }
 
+    // Check if email configuration is set
+    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error('Email configuration missing:', {
+        EMAIL_HOST: !!process.env.EMAIL_HOST,
+        EMAIL_USER: !!process.env.EMAIL_USER,
+        EMAIL_PASS: !!process.env.EMAIL_PASS
+      });
+      return res.status(500).json({
+        success: false,
+        message: 'Email service is not configured. Please contact administrator.'
+      });
+    }
+
     const user = await User.findOne({ email }).select('+loginOTP +loginOTPExpiry');
     
     if (!user) {
@@ -96,7 +109,7 @@ router.post('/request-login-otp', checkMongoConnection, async (req, res) => {
     if (!emailSent) {
       return res.status(500).json({
         success: false,
-        message: 'Failed to send OTP email. Please try again.'
+        message: 'Failed to send OTP email. Please check email configuration or try again later.'
       });
     }
 
@@ -108,7 +121,7 @@ router.post('/request-login-otp', checkMongoConnection, async (req, res) => {
     console.error('Request login OTP error:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || 'Server error. Please try again later.'
     });
   }
 });
