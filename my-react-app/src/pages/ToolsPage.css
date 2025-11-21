@@ -1,0 +1,256 @@
+.tools-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tools-header {
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin-bottom: 2rem;
+  border-radius: 12px;
+}
+
+.tools-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+}
+
+.tools-header p {
+  margin: 0;
+  opacity: 0.95;
+  font-size: 1rem;
+}
+
+/* Tools Grid Layout */
+.tools-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
+  padding: 1rem 0;
+}
+
+.tool-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-top: 4px solid;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 280px;
+}
+
+.tool-card:hover:not(.disabled) {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.tool-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tool-card.disabled:hover {
+  transform: none;
+}
+
+.tool-card-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.tool-card-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+.tool-card-description {
+  margin: 0 0 1.5rem 0;
+  color: #7f8c8d;
+  font-size: 1rem;
+  line-height: 1.6;
+  flex: 1;
+}
+
+.tool-card-badge {
+  display: inline-block;
+  background: #f39c12;
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: 50px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tool-card-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #667eea;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: gap 0.3s ease;
+}
+
+.tool-card:hover:not(.disabled) .tool-card-action {
+  gap: 1rem;
+}
+
+.arrow {
+  font-size: 1.25rem;
+  transition: transform 0.3s ease;
+}
+
+/* Fullscreen Tool View */
+.tools-page.fullscreen-tool {
+  padding: 0;
+}
+
+.tool-fullscreen-header {
+  padding: 1rem 2rem;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 0;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #667eea;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.back-button:hover {
+  background: #f5f7fa;
+  gap: 0.75rem;
+}
+
+.back-arrow {
+  font-size: 1.25rem;
+  transition: transform 0.3s ease;
+}
+
+.back-button:hover .back-arrow {
+  transform: translateX(-4px);
+}
+
+.tool-fullscreen-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.tool-fullscreen-content .costing-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .tools-header {
+    padding: 1.5rem 1rem;
+    margin: -1rem -0.5rem 1rem;
+    border-radius: 0;
+  }
+
+  .tools-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .tools-header p {
+    font-size: 0.9rem;
+  }
+
+  .tools-grid-container {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    padding: 0;
+  }
+
+  .tool-card {
+    padding: 1.5rem;
+    min-height: 240px;
+  }
+
+  .tool-card-icon {
+    width: 70px;
+    height: 70px;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .tool-card-title {
+    font-size: 1.25rem;
+  }
+
+  .tool-card-description {
+    font-size: 0.95rem;
+  }
+
+  .tool-fullscreen-header {
+    padding: 0.75rem 1rem;
+    margin: -1rem -0.5rem 0;
+  }
+
+  .back-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  .tool-fullscreen-content .costing-page {
+    padding: 1rem;
+  }
+}
+
+/* Tablet Responsive */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tools-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .tool-card {
+    padding: 1.75rem;
+  }
+
+  .tool-card-icon {
+    width: 70px;
+    height: 70px;
+    font-size: 2.25rem;
+  }
+
+  .tool-card-title {
+    font-size: 1.35rem;
+  }
+}
+
+/* Desktop hover effects */
+@media (min-width: 769px) {
+  .tool-card:hover:not(.disabled) {
+    transform: translateY(-8px);
+  }
+}

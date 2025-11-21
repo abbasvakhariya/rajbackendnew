@@ -1,0 +1,10 @@
+* [33m8f8b6ae[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Replace OTP login with password-based authentication
+* [33m0fb57ef[m Improved error handling and logging for OTP requests - better error messages and development mode support
+* [33m6087df1[m Improve error handling for OTP request: Add email config check and better error messages
+* [33m3fd338d[m Fix duplicate index warnings: Remove redundant userId indexes
+* [33m98aba53[m Re-implement OTP-based login: Add request-login-otp endpoint and update login to use OTP instead of password
+* [33me551433[m Remove old OTP auth.js file and add OTP rejection in login route
+* [33m7ce7885[m Update backend URL to https://rajwindow-4wrx.onrender.com in documentation
+* [33m2c791a8[m Add root endpoint and improve health check, add error handling for routes
+* [33m7c030ae[m Add FRONTEND_URL support, update CORS for Vercel deployment
+* [33m02b8c90[m Update CORS for Vercel frontend, add deployment documentation
