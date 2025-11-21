@@ -36,9 +36,34 @@ router.post('/register', checkMongoConnection, async (req, res) => {
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists'
+      // If user exists but not verified, auto-verify and allow login
+      if (!existingUser.isEmailVerified) {
+        existingUser.isEmailVerified = true;
+        await existingUser.save();
+      }
+      
+      // Generate token for existing user (auto-login)
+      const token = jwt.sign(
+        { userId: existingUser._id },
+        process.env.JWT_SECRET || 'default-secret-key-change-in-production',
+        { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'You already have an account. Logged in successfully.',
+        token,
+        user: {
+          _id: existingUser._id,
+          email: existingUser.email,
+          fullName: existingUser.fullName,
+          companyName: existingUser.companyName,
+          phone: existingUser.phone,
+          role: existingUser.role,
+          subscriptionStatus: existingUser.subscriptionStatus,
+          subscriptionTier: existingUser.subscriptionTier,
+          subscriptionEndDate: existingUser.subscriptionEndDate
+        }
       });
     }
 
@@ -105,6 +130,12 @@ router.post('/login', checkMongoConnection, async (req, res) => {
         success: false,
         message: 'Invalid email or password'
       });
+    }
+
+    // Auto-verify email if not verified (for existing users or if verification was skipped)
+    if (!user.isEmailVerified) {
+      user.isEmailVerified = true;
+      await user.save();
     }
 
     // Verify password
