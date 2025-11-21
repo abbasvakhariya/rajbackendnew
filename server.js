@@ -21,12 +21,13 @@ dotenv.config();
 const app = express();
 
 // Middleware
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://windowsmangement.vercel.app';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://windowsmangement-abbasvakhariyas-projects.vercel.app';
 app.use(cors({
   origin: [
     'http://localhost:5173',
     'http://localhost:5174',
     'https://windowsmangement.vercel.app',
+    'https://windowsmangement-abbasvakhariyas-projects.vercel.app',
     'http://windowsmangement.vercel.app',
     FRONTEND_URL,
     FRONTEND_URL.replace('https://', 'http://'),
