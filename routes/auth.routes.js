@@ -133,9 +133,23 @@ router.post('/login', checkMongoConnection, async (req, res) => {
     }
 
     // Auto-verify email if not verified (for existing users or if verification was skipped)
+    // This ensures all users can login without email verification
     if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-      await user.save();
+      try {
+        user.isEmailVerified = true;
+        await user.save({ validateBeforeSave: false });
+        console.log(`✅ Auto-verified email for user: ${email}`);
+      } catch (saveError) {
+        console.error('Error auto-verifying email:', saveError);
+        // Continue with login even if save fails - we'll try to update it
+        // Use updateOne as fallback
+        try {
+          await User.updateOne({ _id: user._id }, { isEmailVerified: true });
+        } catch (updateError) {
+          console.error('Error updating email verification:', updateError);
+          // Still continue - don't block login
+        }
+      }
     }
 
     // Verify password
