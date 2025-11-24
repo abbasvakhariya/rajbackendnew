@@ -10,8 +10,9 @@ dotenv.config();
 const app = express();
 
 // Trust proxy - Required for Render and other hosting platforms with reverse proxies
-// This allows Express to correctly identify the client's IP address
-app.set('trust proxy', true);
+// Set to 1 to trust only the first proxy hop (more secure than true)
+// This allows Express to correctly identify the client's IP address while preventing IP spoofing
+app.set('trust proxy', 1);
 
 // Middleware
 // CORS configuration - allow both localhost and production
@@ -52,9 +53,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting
+// Configured to work securely with trust proxy: 1 setting
+// Using trust proxy: 1 (instead of true) prevents IP spoofing while still working with Render's reverse proxy
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false // Disable the `X-RateLimit-*` headers
 });
 app.use('/api/', limiter);
 

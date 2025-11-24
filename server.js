@@ -21,8 +21,9 @@ dotenv.config();
 const app = express();
 
 // Trust proxy - Required for Render and other hosting platforms with reverse proxies
-// This allows Express to correctly identify the client's IP address
-app.set('trust proxy', true);
+// Set to 1 to trust only the first proxy hop (more secure than true)
+// This allows Express to correctly identify the client's IP address while preventing IP spoofing
+app.set('trust proxy', 1);
 
 // Middleware
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://windowsmangement-abbasvakhariyas-projects.vercel.app';
