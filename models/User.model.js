@@ -32,25 +32,7 @@ const userSchema = new mongoose.Schema({
   },
   isEmailVerified: {
     type: Boolean,
-    default: false
-  },
-  emailVerificationOTP: {
-    type: String,
-    default: null
-  },
-  emailVerificationOTPExpiry: {
-    type: Date,
-    default: null
-  },
-  loginOTP: {
-    type: String,
-    default: null,
-    select: false
-  },
-  loginOTPExpiry: {
-    type: Date,
-    default: null,
-    select: false
+    default: true
   },
   deviceId: {
     type: String,

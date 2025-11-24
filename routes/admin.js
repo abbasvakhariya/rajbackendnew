@@ -212,7 +212,7 @@ router.get('/users', async (req, res) => {
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
     const users = await User.find(query)
-      .select('-password -emailVerificationOTP -loginOTP')
+      .select('-password')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -262,7 +262,7 @@ router.get('/users', async (req, res) => {
 router.get('/users/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
-      .select('-password -emailVerificationOTP -loginOTP');
+      .select('-password');
     
     if (!user) {
       return res.status(404).json({
@@ -1008,7 +1008,7 @@ router.get('/reports/users', async (req, res) => {
     }
 
     const users = await User.find(query)
-      .select('-password -emailVerificationOTP -loginOTP')
+      .select('-password')
       .sort({ createdAt: -1 });
 
     res.json({

@@ -339,7 +339,7 @@ router.get('/audit-logs', async (req, res) => {
 
 router.get('/export/users', async (req, res) => {
   try {
-    const users = await User.find().select('-password -emailVerificationOTP -loginOTP');
+    const users = await User.find().select('-password');
     res.json({ success: true, data: users });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
