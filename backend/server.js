@@ -9,6 +9,10 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy - Required for Render and other hosting platforms with reverse proxies
+// This allows Express to correctly identify the client's IP address
+app.set('trust proxy', true);
+
 // Middleware
 // CORS configuration - allow both localhost and production
 const allowedOrigins = [

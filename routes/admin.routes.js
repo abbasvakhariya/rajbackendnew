@@ -11,6 +11,9 @@ import { authenticate, isAdmin } from '../middleware/auth.middleware.js';
 // Import models - use ES6 versions
 import Subscription from '../models/Subscription.model.js';
 import SubscriptionPayment from '../models/PaymentSubscription.model.js';
+import ToolSettings from '../models/ToolSettings.model.js';
+import RateConfiguration from '../models/RateConfiguration.model.js';
+import { sendSettingsChangeNotification } from '../utils/email.js';
 
 const router = express.Router();
 
@@ -99,7 +102,7 @@ router.get('/stats', async (req, res) => {
       date.setHours(0, 0, 0, 0);
       const nextDate = new Date(date);
       nextDate.setDate(nextDate.getDate() + 1);
-      const payments = await Payment.find({
+      const payments = await SubscriptionPayment.find({
         status: 'completed',
         createdAt: { $gte: date, $lt: nextDate }
       });
@@ -429,7 +432,7 @@ router.post('/users/:id/reset-password', async (req, res) => {
   try {
     const { newPassword } = req.body;
     const user = await User.findById(req.params.id);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -460,6 +463,70 @@ router.post('/users/:id/reset-password', async (req, res) => {
   }
 });
 
+router.post('/users', async (req, res) => {
+  try {
+    const { email, password, fullName, companyName, phone, subscriptionTier, subscriptionStatus } = req.body;
+
+    if (!email || !password || !fullName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, password, and full name are required'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+
+    // Create user
+    const user = new User({
+      email: email.toLowerCase(),
+      password,
+      fullName,
+      companyName: companyName || '',
+      phone: phone || '',
+      subscriptionTier: subscriptionTier || 'trial',
+      subscriptionStatus: subscriptionStatus || 'trial',
+      subscriptionStartDate: new Date(),
+      subscriptionEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days trial
+    });
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'User created successfully',
+      user: {
+        _id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        companyName: user.companyName,
+        phone: user.phone,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionStatus: user.subscriptionStatus
+      }
+    });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
 router.delete('/users/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -480,6 +547,7 @@ router.delete('/users/:id', async (req, res) => {
 
     await Window.deleteMany({ userId: user._id });
     await Settings.deleteOne({ userId: user._id });
+    await ToolSettings.deleteOne({ userId: user._id });
     await Subscription.deleteMany({ userId: user._id });
     await SubscriptionPayment.deleteMany({ userId: user._id });
     await Quotation.deleteMany({ userId: user._id });
@@ -1037,6 +1105,421 @@ router.get('/reports/revenue', async (req, res) => {
     });
   } catch (error) {
     console.error('Revenue report error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+// ============================================
+// SUBSCRIPTION PLANS MANAGEMENT
+// ============================================
+
+router.get('/plans', async (req, res) => {
+  try {
+    // Get plans from SystemSettings or return default
+    const SystemSettingsModule = await import('../models/SystemSettings.js');
+    const SystemSettings = SystemSettingsModule.default || SystemSettingsModule;
+    const settings = await SystemSettings.findOne({ key: 'subscription_plans' });
+    
+    const defaultPlans = {
+      '1_month': { price: 460, duration: 1, billingCycle: 'monthly', name: '1 Month', enabled: true },
+      '3_months': { price: 1250, duration: 3, billingCycle: 'quarterly', name: '3 Months', enabled: true },
+      '6_months': { price: 2200, duration: 6, billingCycle: 'semi_annual', name: '6 Months', enabled: true },
+      '12_months': { price: 4000, duration: 12, billingCycle: 'annual', name: '12 Months', enabled: true }
+    };
+
+    const plans = settings?.value || defaultPlans;
+
+    res.json({
+      success: true,
+      plans
+    });
+  } catch (error) {
+    console.error('Get plans error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.post('/plans', async (req, res) => {
+  try {
+    const { key, name, price, duration, billingCycle, enabled = true } = req.body;
+
+    if (!key || !name || !price || !duration) {
+      return res.status(400).json({
+        success: false,
+        message: 'Key, name, price, and duration are required'
+      });
+    }
+
+    const SystemSettingsModule = await import('../models/SystemSettings.js');
+    const SystemSettings = SystemSettingsModule.default || SystemSettingsModule;
+    const settings = await SystemSettings.findOne({ key: 'subscription_plans' });
+    
+    const defaultPlans = {
+      '1_month': { price: 460, duration: 1, billingCycle: 'monthly', name: '1 Month', enabled: true },
+      '3_months': { price: 1250, duration: 3, billingCycle: 'quarterly', name: '3 Months', enabled: true },
+      '6_months': { price: 2200, duration: 6, billingCycle: 'semi_annual', name: '6 Months', enabled: true },
+      '12_months': { price: 4000, duration: 12, billingCycle: 'annual', name: '12 Months', enabled: true }
+    };
+
+    const currentPlans = settings?.value || defaultPlans;
+    const planKey = key.toLowerCase().replace(/\s+/g, '_');
+
+    currentPlans[planKey] = {
+      name,
+      price: parseFloat(price),
+      duration: parseInt(duration),
+      billingCycle: billingCycle || 'monthly',
+      enabled: enabled !== false
+    };
+
+    await SystemSettings.findOneAndUpdate(
+      { key: 'subscription_plans' },
+      { 
+        key: 'subscription_plans',
+        value: currentPlans,
+        type: 'object',
+        category: 'subscription',
+        updatedBy: req.user._id
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Plan created successfully',
+      plans: currentPlans
+    });
+  } catch (error) {
+    console.error('Create plan error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.put('/plans', async (req, res) => {
+  try {
+    const { plans } = req.body;
+    const SystemSettingsModule = await import('../models/SystemSettings.js');
+    const SystemSettings = SystemSettingsModule.default || SystemSettingsModule;
+    
+    await SystemSettings.findOneAndUpdate(
+      { key: 'subscription_plans' },
+      { 
+        key: 'subscription_plans',
+        value: plans,
+        type: 'object',
+        category: 'subscription',
+        updatedBy: req.user._id
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Plans updated successfully',
+      plans
+    });
+  } catch (error) {
+    console.error('Update plans error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.delete('/plans/:planKey', async (req, res) => {
+  try {
+    const { planKey } = req.params;
+    const SystemSettingsModule = await import('../models/SystemSettings.js');
+    const SystemSettings = SystemSettingsModule.default || SystemSettingsModule;
+    const settings = await SystemSettings.findOne({ key: 'subscription_plans' });
+    
+    if (!settings || !settings.value[planKey]) {
+      return res.status(404).json({
+        success: false,
+        message: 'Plan not found'
+      });
+    }
+
+    delete settings.value[planKey];
+    await settings.save();
+
+    res.json({
+      success: true,
+      message: 'Plan deleted successfully',
+      plans: settings.value
+    });
+  } catch (error) {
+    console.error('Delete plan error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+// ============================================
+// USER SETTINGS & RATES MANAGEMENT
+// ============================================
+
+router.get('/users/:id/settings', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    let toolSettings = await ToolSettings.findOne({ userId: user._id });
+    if (!toolSettings) {
+      // Create default tool settings
+      toolSettings = new ToolSettings({ userId: user._id });
+      await toolSettings.save();
+    }
+
+    res.json({
+      success: true,
+      settings: toolSettings
+    });
+  } catch (error) {
+    console.error('Get user settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.put('/users/:id/settings', async (req, res) => {
+  try {
+    const { settings, notifyUser = true } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    let toolSettings = await ToolSettings.findOne({ userId: user._id });
+    if (!toolSettings) {
+      toolSettings = new ToolSettings({ userId: user._id });
+    }
+
+    // Update settings
+    if (settings.windowCosting) toolSettings.windowCosting = settings.windowCosting;
+    if (settings.doorCosting) toolSettings.doorCosting = settings.doorCosting;
+    if (settings.cuttingMeasuring) toolSettings.cuttingMeasuring = settings.cuttingMeasuring;
+    if (settings.customCategories) toolSettings.customCategories = settings.customCategories;
+
+    await toolSettings.save();
+
+    // Send email notification if requested
+    if (notifyUser) {
+      const changes = {
+        'Tool Settings': 'Your tool settings have been updated by the administrator'
+      };
+      await sendSettingsChangeNotification(user.email, changes, user.fullName);
+    }
+
+    res.json({
+      success: true,
+      message: 'Settings updated successfully',
+      settings: toolSettings
+    });
+  } catch (error) {
+    console.error('Update user settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.post('/users/:id/settings/reset', async (req, res) => {
+  try {
+    const { notifyUser = true } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Delete existing settings
+    await ToolSettings.deleteOne({ userId: user._id });
+
+    // Create new default settings
+    const toolSettings = new ToolSettings({ userId: user._id });
+    await toolSettings.save();
+
+    // Send email notification if requested
+    if (notifyUser) {
+      const changes = {
+        'Tool Settings': 'Your tool settings have been reset to default values'
+      };
+      await sendSettingsChangeNotification(user.email, changes, user.fullName);
+    }
+
+    res.json({
+      success: true,
+      message: 'Settings reset successfully',
+      settings: toolSettings
+    });
+  } catch (error) {
+    console.error('Reset user settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+// Get user rates
+router.get('/users/:id/rates', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    let rateConfig = await RateConfiguration.findOne({ userId: user._id });
+    if (!rateConfig) {
+      // Create default rate configuration
+      rateConfig = new RateConfiguration({ userId: user._id });
+      await rateConfig.save();
+    }
+
+    res.json({
+      success: true,
+      rates: rateConfig
+    });
+  } catch (error) {
+    console.error('Get user rates error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+// Update user rates
+router.put('/users/:id/rates', async (req, res) => {
+  try {
+    const { rates, notifyUser = true } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    let rateConfig = await RateConfiguration.findOne({ userId: user._id });
+    if (!rateConfig) {
+      rateConfig = new RateConfiguration({ userId: user._id });
+    }
+
+    // Update rates
+    Object.assign(rateConfig, rates);
+    await rateConfig.save();
+
+    // Send email notification if requested
+    if (notifyUser) {
+      const changes = {
+        'Rate Configuration': 'Your rate configuration has been updated by the administrator'
+      };
+      await sendSettingsChangeNotification(user.email, changes, user.fullName);
+    }
+
+    res.json({
+      success: true,
+      message: 'Rates updated successfully',
+      rates: rateConfig
+    });
+  } catch (error) {
+    console.error('Update user rates error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+// Update both settings and rates together
+router.put('/users/:id/settings-and-rates', async (req, res) => {
+  try {
+    const { settings, rates, notifyUser = true } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const changes = {};
+
+    // Update tool settings
+    if (settings) {
+      let toolSettings = await ToolSettings.findOne({ userId: user._id });
+      if (!toolSettings) {
+        toolSettings = new ToolSettings({ userId: user._id });
+      }
+
+      if (settings.windowCosting) toolSettings.windowCosting = settings.windowCosting;
+      if (settings.doorCosting) toolSettings.doorCosting = settings.doorCosting;
+      if (settings.cuttingMeasuring) toolSettings.cuttingMeasuring = settings.cuttingMeasuring;
+      if (settings.customCategories) toolSettings.customCategories = settings.customCategories;
+
+      await toolSettings.save();
+      changes['Tool Settings'] = 'Your tool settings have been updated';
+    }
+
+    // Update rates
+    if (rates) {
+      let rateConfig = await RateConfiguration.findOne({ userId: user._id });
+      if (!rateConfig) {
+        rateConfig = new RateConfiguration({ userId: user._id });
+      }
+
+      Object.assign(rateConfig, rates);
+      await rateConfig.save();
+      changes['Rate Configuration'] = 'Your rate configuration has been updated';
+    }
+
+    // Send email notification if requested
+    if (notifyUser && Object.keys(changes).length > 0) {
+      await sendSettingsChangeNotification(user.email, changes, user.fullName);
+    }
+
+    res.json({
+      success: true,
+      message: 'Settings and rates updated successfully',
+      settings: settings ? await ToolSettings.findOne({ userId: user._id }) : null,
+      rates: rates ? await RateConfiguration.findOne({ userId: user._id }) : null
+    });
+  } catch (error) {
+    console.error('Update settings and rates error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
