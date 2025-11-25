@@ -251,6 +251,264 @@ router.get('/users', async (req, res) => {
   }
 });
 
+// ============================================
+// USER SETTINGS & RATES MANAGEMENT
+// (Placed before /users/:id to ensure proper route matching)
+// ============================================
+
+router.get('/users/:id/settings', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    let toolSettings = await ToolSettings.findOne({ userId: user._id });
+    if (!toolSettings) {
+      // Create default tool settings
+      toolSettings = new ToolSettings({ userId: user._id });
+      await toolSettings.save();
+    }
+
+    res.json({
+      success: true,
+      settings: toolSettings
+    });
+  } catch (error) {
+    console.error('Get user settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.put('/users/:id/settings', async (req, res) => {
+  try {
+    const { settings, notifyUser = true } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    let toolSettings = await ToolSettings.findOne({ userId: user._id });
+    if (!toolSettings) {
+      toolSettings = new ToolSettings({ userId: user._id });
+    }
+
+    // Update settings
+    if (settings.windowCosting) toolSettings.windowCosting = settings.windowCosting;
+    if (settings.doorCosting) toolSettings.doorCosting = settings.doorCosting;
+    if (settings.cuttingMeasuring) toolSettings.cuttingMeasuring = settings.cuttingMeasuring;
+    if (settings.customCategories) toolSettings.customCategories = settings.customCategories;
+
+    await toolSettings.save();
+
+    // Send email notification if requested
+    if (notifyUser) {
+      const changes = {
+        'Tool Settings': 'Your tool settings have been updated by the administrator'
+      };
+      await sendSettingsChangeNotification(user.email, changes, user.fullName);
+    }
+
+    res.json({
+      success: true,
+      message: 'Settings updated successfully',
+      settings: toolSettings
+    });
+  } catch (error) {
+    console.error('Update user settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.post('/users/:id/settings/reset', async (req, res) => {
+  try {
+    const { notifyUser = true } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Delete existing settings
+    await ToolSettings.deleteOne({ userId: user._id });
+
+    // Create new default settings
+    const toolSettings = new ToolSettings({ userId: user._id });
+    await toolSettings.save();
+
+    // Send email notification if requested
+    if (notifyUser) {
+      const changes = {
+        'Tool Settings': 'Your tool settings have been reset to default values'
+      };
+      await sendSettingsChangeNotification(user.email, changes, user.fullName);
+    }
+
+    res.json({
+      success: true,
+      message: 'Settings reset successfully',
+      settings: toolSettings
+    });
+  } catch (error) {
+    console.error('Reset user settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.get('/users/:id/rates', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    let rateConfig = await RateConfiguration.findOne({ userId: user._id });
+    if (!rateConfig) {
+      // Create default rate configuration
+      rateConfig = new RateConfiguration({ userId: user._id });
+      await rateConfig.save();
+    }
+
+    res.json({
+      success: true,
+      rates: rateConfig
+    });
+  } catch (error) {
+    console.error('Get user rates error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.put('/users/:id/rates', async (req, res) => {
+  try {
+    const { rates, notifyUser = true } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    let rateConfig = await RateConfiguration.findOne({ userId: user._id });
+    if (!rateConfig) {
+      rateConfig = new RateConfiguration({ userId: user._id });
+    }
+
+    // Update rates
+    Object.assign(rateConfig, rates);
+    await rateConfig.save();
+
+    // Send email notification if requested
+    if (notifyUser) {
+      const changes = {
+        'Rate Configuration': 'Your rate configuration has been updated by the administrator'
+      };
+      await sendSettingsChangeNotification(user.email, changes, user.fullName);
+    }
+
+    res.json({
+      success: true,
+      message: 'Rates updated successfully',
+      rates: rateConfig
+    });
+  } catch (error) {
+    console.error('Update user rates error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
+router.put('/users/:id/settings-and-rates', async (req, res) => {
+  try {
+    const { settings, rates, notifyUser = true } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const changes = {};
+
+    // Update tool settings
+    if (settings) {
+      let toolSettings = await ToolSettings.findOne({ userId: user._id });
+      if (!toolSettings) {
+        toolSettings = new ToolSettings({ userId: user._id });
+      }
+
+      if (settings.windowCosting) toolSettings.windowCosting = settings.windowCosting;
+      if (settings.doorCosting) toolSettings.doorCosting = settings.doorCosting;
+      if (settings.cuttingMeasuring) toolSettings.cuttingMeasuring = settings.cuttingMeasuring;
+      if (settings.customCategories) toolSettings.customCategories = settings.customCategories;
+
+      await toolSettings.save();
+      changes['Tool Settings'] = 'Your tool settings have been updated';
+    }
+
+    // Update rates
+    if (rates) {
+      let rateConfig = await RateConfiguration.findOne({ userId: user._id });
+      if (!rateConfig) {
+        rateConfig = new RateConfiguration({ userId: user._id });
+      }
+
+      Object.assign(rateConfig, rates);
+      await rateConfig.save();
+      changes['Rate Configuration'] = 'Your rate configuration has been updated';
+    }
+
+    // Send email notification if requested
+    if (notifyUser && Object.keys(changes).length > 0) {
+      await sendSettingsChangeNotification(user.email, changes, user.fullName);
+    }
+
+    res.json({
+      success: true,
+      message: 'Settings and rates updated successfully',
+      settings: settings ? await ToolSettings.findOne({ userId: user._id }) : null,
+      rates: rates ? await RateConfiguration.findOne({ userId: user._id }) : null
+    });
+  } catch (error) {
+    console.error('Update settings and rates error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+});
+
 router.get('/users/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
@@ -1260,266 +1518,6 @@ router.delete('/plans/:planKey', async (req, res) => {
     });
   } catch (error) {
     console.error('Delete plan error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Server error'
-    });
-  }
-});
-
-// ============================================
-// USER SETTINGS & RATES MANAGEMENT
-// ============================================
-
-router.get('/users/:id/settings', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    let toolSettings = await ToolSettings.findOne({ userId: user._id });
-    if (!toolSettings) {
-      // Create default tool settings
-      toolSettings = new ToolSettings({ userId: user._id });
-      await toolSettings.save();
-    }
-
-    res.json({
-      success: true,
-      settings: toolSettings
-    });
-  } catch (error) {
-    console.error('Get user settings error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Server error'
-    });
-  }
-});
-
-router.put('/users/:id/settings', async (req, res) => {
-  try {
-    const { settings, notifyUser = true } = req.body;
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    let toolSettings = await ToolSettings.findOne({ userId: user._id });
-    if (!toolSettings) {
-      toolSettings = new ToolSettings({ userId: user._id });
-    }
-
-    // Update settings
-    if (settings.windowCosting) toolSettings.windowCosting = settings.windowCosting;
-    if (settings.doorCosting) toolSettings.doorCosting = settings.doorCosting;
-    if (settings.cuttingMeasuring) toolSettings.cuttingMeasuring = settings.cuttingMeasuring;
-    if (settings.customCategories) toolSettings.customCategories = settings.customCategories;
-
-    await toolSettings.save();
-
-    // Send email notification if requested
-    if (notifyUser) {
-      const changes = {
-        'Tool Settings': 'Your tool settings have been updated by the administrator'
-      };
-      await sendSettingsChangeNotification(user.email, changes, user.fullName);
-    }
-
-    res.json({
-      success: true,
-      message: 'Settings updated successfully',
-      settings: toolSettings
-    });
-  } catch (error) {
-    console.error('Update user settings error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Server error'
-    });
-  }
-});
-
-router.post('/users/:id/settings/reset', async (req, res) => {
-  try {
-    const { notifyUser = true } = req.body;
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Delete existing settings
-    await ToolSettings.deleteOne({ userId: user._id });
-
-    // Create new default settings
-    const toolSettings = new ToolSettings({ userId: user._id });
-    await toolSettings.save();
-
-    // Send email notification if requested
-    if (notifyUser) {
-      const changes = {
-        'Tool Settings': 'Your tool settings have been reset to default values'
-      };
-      await sendSettingsChangeNotification(user.email, changes, user.fullName);
-    }
-
-    res.json({
-      success: true,
-      message: 'Settings reset successfully',
-      settings: toolSettings
-    });
-  } catch (error) {
-    console.error('Reset user settings error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Server error'
-    });
-  }
-});
-
-// Get user rates
-router.get('/users/:id/rates', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    let rateConfig = await RateConfiguration.findOne({ userId: user._id });
-    if (!rateConfig) {
-      // Create default rate configuration
-      rateConfig = new RateConfiguration({ userId: user._id });
-      await rateConfig.save();
-    }
-
-    res.json({
-      success: true,
-      rates: rateConfig
-    });
-  } catch (error) {
-    console.error('Get user rates error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Server error'
-    });
-  }
-});
-
-// Update user rates
-router.put('/users/:id/rates', async (req, res) => {
-  try {
-    const { rates, notifyUser = true } = req.body;
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    let rateConfig = await RateConfiguration.findOne({ userId: user._id });
-    if (!rateConfig) {
-      rateConfig = new RateConfiguration({ userId: user._id });
-    }
-
-    // Update rates
-    Object.assign(rateConfig, rates);
-    await rateConfig.save();
-
-    // Send email notification if requested
-    if (notifyUser) {
-      const changes = {
-        'Rate Configuration': 'Your rate configuration has been updated by the administrator'
-      };
-      await sendSettingsChangeNotification(user.email, changes, user.fullName);
-    }
-
-    res.json({
-      success: true,
-      message: 'Rates updated successfully',
-      rates: rateConfig
-    });
-  } catch (error) {
-    console.error('Update user rates error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Server error'
-    });
-  }
-});
-
-// Update both settings and rates together
-router.put('/users/:id/settings-and-rates', async (req, res) => {
-  try {
-    const { settings, rates, notifyUser = true } = req.body;
-    const user = await User.findById(req.params.id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    const changes = {};
-
-    // Update tool settings
-    if (settings) {
-      let toolSettings = await ToolSettings.findOne({ userId: user._id });
-      if (!toolSettings) {
-        toolSettings = new ToolSettings({ userId: user._id });
-      }
-
-      if (settings.windowCosting) toolSettings.windowCosting = settings.windowCosting;
-      if (settings.doorCosting) toolSettings.doorCosting = settings.doorCosting;
-      if (settings.cuttingMeasuring) toolSettings.cuttingMeasuring = settings.cuttingMeasuring;
-      if (settings.customCategories) toolSettings.customCategories = settings.customCategories;
-
-      await toolSettings.save();
-      changes['Tool Settings'] = 'Your tool settings have been updated';
-    }
-
-    // Update rates
-    if (rates) {
-      let rateConfig = await RateConfiguration.findOne({ userId: user._id });
-      if (!rateConfig) {
-        rateConfig = new RateConfiguration({ userId: user._id });
-      }
-
-      Object.assign(rateConfig, rates);
-      await rateConfig.save();
-      changes['Rate Configuration'] = 'Your rate configuration has been updated';
-    }
-
-    // Send email notification if requested
-    if (notifyUser && Object.keys(changes).length > 0) {
-      await sendSettingsChangeNotification(user.email, changes, user.fullName);
-    }
-
-    res.json({
-      success: true,
-      message: 'Settings and rates updated successfully',
-      settings: settings ? await ToolSettings.findOne({ userId: user._id }) : null,
-      rates: rates ? await RateConfiguration.findOne({ userId: user._id }) : null
-    });
-  } catch (error) {
-    console.error('Update settings and rates error:', error);
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
