@@ -72,197 +72,106 @@ router.post('/register', [
 });
 
 // @route   POST /api/auth/verify-email
-// @desc    Verify email with OTP
+// @desc    Email verification no longer required - OTP removed
 // @access  Public
 router.post('/verify-email', [
   body('email').isEmail().normalizeEmail(),
-  body('otp').isLength({ min: 6, max: 6 })
+  body('otp').optional()
 ], async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-
-    const user = await User.findOne({ email }).select('+emailVerificationOTP +emailVerificationOTPExpiry');
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    if (user.isEmailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already verified'
-      });
-    }
-
-    if (user.emailVerificationOTP !== otp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid OTP'
-      });
-    }
-
-    if (new Date() > user.emailVerificationOTPExpiry) {
-      return res.status(400).json({
-        success: false,
-        message: 'OTP has expired. Please request a new one.'
-      });
-    }
-
-    // Verify email
-    user.isEmailVerified = true;
-    user.emailVerificationOTP = undefined;
-    user.emailVerificationOTPExpiry = undefined;
-    await user.save();
-
-    res.json({
-      success: true,
-      message: 'Email verified successfully'
-    });
-  } catch (error) {
-    console.error('Email verification error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during email verification'
-    });
-  }
+  return res.status(400).json({
+    success: false,
+    message: 'Email verification is no longer required. Your email is automatically verified on registration.'
+  });
 });
 
 // @route   POST /api/auth/resend-otp
-// @desc    Resend verification OTP
+// @desc    OTP functionality removed - email verification no longer required
 // @access  Public
 router.post('/resend-otp', [
   body('email').isEmail().normalizeEmail()
 ], async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const user = await User.findOne({ email }).select('+emailVerificationOTP +emailVerificationOTPExpiry');
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    if (user.isEmailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already verified'
-      });
-    }
-
-    // Generate new OTP
-    const emailOTP = generateOTP();
-    user.emailVerificationOTP = emailOTP;
-    user.emailVerificationOTPExpiry = new Date(Date.now() + 10 * 60 * 1000);
-    await user.save();
-
-    // Send OTP
-    await sendOTP(email, emailOTP, 'verification');
-
-    res.json({
-      success: true,
-      message: 'OTP sent to your email'
-    });
-  } catch (error) {
-    console.error('Resend OTP error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
+  return res.status(400).json({
+    success: false,
+    message: 'OTP functionality is no longer supported. Email verification is automatic.'
+  });
 });
 
 // @route   POST /api/auth/request-login-otp
-// @desc    Request login OTP
+// @desc    OTP functionality removed - use password login instead
 // @access  Public
 router.post('/request-login-otp', [
   body('email').isEmail().normalizeEmail()
 ], async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const user = await User.findOne({ email }).select('+loginOTP +loginOTPExpiry');
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    if (!user.isEmailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please verify your email first'
-      });
-    }
-
-    // Generate login OTP
-    const loginOTP = generateOTP();
-    user.loginOTP = loginOTP;
-    user.loginOTPExpiry = new Date(Date.now() + 10 * 60 * 1000);
-    await user.save();
-
-    // Send OTP
-    await sendOTP(email, loginOTP, 'login');
-
-    res.json({
-      success: true,
-      message: 'Login OTP sent to your email'
-    });
-  } catch (error) {
-    console.error('Request login OTP error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
+  return res.status(400).json({
+    success: false,
+    message: 'OTP login is no longer supported. Please use password-based login.'
+  });
 });
 
 // @route   POST /api/auth/login
-// @desc    Login with OTP
+// @desc    Login with Password (OTP removed)
 // @access  Public
 router.post('/login', [
   body('email').isEmail().normalizeEmail(),
-  body('otp').isLength({ min: 6, max: 6 }),
-  body('deviceId').notEmpty()
+  body('password').notEmpty(),
+  body('deviceId').optional()
 ], async (req, res) => {
   try {
-    const { email, otp, deviceId } = req.body;
+    const { email, password, deviceId, forceLogout, logoutOtherDevices } = req.body;
 
-    const user = await User.findOne({ email }).select('+loginOTP +loginOTPExpiry');
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+
+    // Find user - need to explicitly select password for comparison
+    const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
-      return res.status(404).json({
+      return res.status(401).json({
         success: false,
-        message: 'User not found'
+        message: 'Invalid email or password'
       });
     }
 
+    // Auto-verify email if not verified
     if (!user.isEmailVerified) {
-      return res.status(400).json({
+      user.isEmailVerified = true;
+      await user.save({ validateBeforeSave: false });
+    }
+
+    // Verify password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
         success: false,
-        message: 'Please verify your email first'
+        message: 'Invalid email or password'
       });
     }
 
-    if (!user.loginOTP || user.loginOTP !== otp) {
-      return res.status(400).json({
+    // If forceLogout is true, clear device before checking
+    if (forceLogout || logoutOtherDevices) {
+      user.deviceId = undefined;
+      user.currentDevice = undefined;
+      await user.save();
+    }
+
+    // Check device conflict (only if not forcing logout)
+    if (!forceLogout && !logoutOtherDevices && deviceId && user.deviceId && user.deviceId !== deviceId) {
+      return res.status(409).json({
         success: false,
-        message: 'Invalid OTP'
+        code: 'DEVICE_CONFLICT',
+        message: 'Another device is already logged in. Please logout from other device first.',
+        deviceConflict: true
       });
     }
 
-    if (new Date() > user.loginOTPExpiry) {
-      return res.status(400).json({
-        success: false,
-        message: 'OTP has expired. Please request a new one.'
-      });
+    // Update device ID
+    if (deviceId) {
+      user.deviceId = deviceId;
+      await user.save();
     }
 
     // Check if another device is logged in
@@ -302,14 +211,12 @@ router.post('/login', [
       await user.save();
     }
 
-    // Update device info and clear OTP
+    // Update device info
     user.currentDevice = {
       deviceId: deviceId,
       deviceInfo: req.headers['user-agent'] || 'Unknown',
       lastLogin: new Date()
     };
-    user.loginOTP = undefined;
-    user.loginOTPExpiry = undefined;
     await user.save();
 
     // Generate token
@@ -362,16 +269,16 @@ router.post('/logout', protect, checkDevice, async (req, res) => {
 });
 
 // @route   POST /api/auth/force-logout
-// @desc    Force logout from all devices (clears device session using OTP)
-// @access  Public (requires valid OTP)
+// @desc    Force logout from all devices (OTP removed - use password login with forceLogout flag)
+// @access  Public
 router.post('/force-logout', [
   body('email').isEmail().normalizeEmail(),
-  body('otp').isLength({ min: 6, max: 6 })
+  body('password').notEmpty()
 ], async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+loginOTP +loginOTPExpiry');
+    const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
       return res.status(404).json({
@@ -380,22 +287,17 @@ router.post('/force-logout', [
       });
     }
 
-    // Verify OTP
-    if (!user.loginOTP || user.loginOTP !== otp) {
-      return res.status(400).json({
+    // Verify password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
         success: false,
-        message: 'Invalid OTP'
-      });
-    }
-
-    if (new Date() > user.loginOTPExpiry) {
-      return res.status(400).json({
-        success: false,
-        message: 'OTP has expired'
+        message: 'Invalid password'
       });
     }
 
     // Clear device session
+    user.deviceId = undefined;
     user.currentDevice = undefined;
     await user.save();
 
