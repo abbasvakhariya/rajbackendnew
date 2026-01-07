@@ -115,8 +115,8 @@ router.post('/create-payment', protect, checkDevice, async (req, res) => {
         payment_method: 'paypal'
       },
       redirect_urls: {
-        return_url: `${process.env.FRONTEND_URL}/subscription/success`,
-        cancel_url: `${process.env.FRONTEND_URL}/subscription/cancel`
+        return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/subscription?paymentId={PAYMENT_ID}&PayerID={PAYER_ID}`,
+        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/subscription?canceled=true`
       },
       transactions: [{
         item_list: {

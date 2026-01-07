@@ -27,18 +27,42 @@ app.set('trust proxy', 1);
 
 // Middleware
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://windowsmangement-abbasvakhariyas-projects.vercel.app';
+// CORS configuration - Allow Flutter web and React app
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://windowsmangement.vercel.app',
-    'https://windowsmangement-abbasvakhariyas-projects.vercel.app',
-    'http://windowsmangement.vercel.app',
-    FRONTEND_URL,
-    FRONTEND_URL.replace('https://', 'http://'),
-    FRONTEND_URL.replace('http://', 'https://')
-  ].filter(Boolean),
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // List of allowed origins
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000',
+      'http://localhost:8080',
+      'https://windowsmangement.vercel.app',
+      'https://windowsmangement-abbasvakhariyas-projects.vercel.app',
+      'http://windowsmangement.vercel.app',
+      FRONTEND_URL,
+      FRONTEND_URL.replace('https://', 'http://'),
+      FRONTEND_URL.replace('http://', 'https://')
+    ];
+    
+    // Allow any localhost port (for Flutter web development)
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all origins in development (change in production)
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-device-id'],
+  exposedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
